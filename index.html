@@ -82,7 +82,25 @@ gltfLoader.load('https://cdn.3dassets.dev/assets/17066/v1/model.glb',gltf=>{
  oldEnvironment.forEach(o=>{if(!o.isLight)o.visible=false});
  const officeModel=gltf.scene;officeModel.position.set(0,0,0);scene.add(officeModel);
  officeModel.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.roughness=Math.max(.45,o.material.roughness??.7)}}});
- document.getElementById('status').textContent='Realistic office assets loaded • 3D mode';
+ // Add a dedicated pantry counter and billiards table to the realistic asset scene.
+ const extra=new THREE.Group();scene.add(extra);
+ const woodReal=new THREE.MeshStandardMaterial({color:0x63432d,roughness:.62});
+ const felt=new THREE.MeshStandardMaterial({color:0x12583e,roughness:.9});
+ const steel=new THREE.MeshStandardMaterial({color:0x555b5d,metalness:.55,roughness:.4});
+ const creamReal=new THREE.MeshStandardMaterial({color:0xd9d1bf,roughness:.8});
+ function extraBox(w,h,d,m,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;extra.add(o);return o}
+ // Billiard table: felt top, wooden rails, six dark pockets and legs.
+ extraBox(2.65,.22,1.5,woodReal,8.0,.78,3.25);extraBox(2.42,.045,1.27,felt,8.0,.91,3.25);
+ for(const dx of [-1.25,1.25])extraBox(.13,.15,1.5,woodReal,8+dx,.94,3.25);
+ for(const dz of [-.69,.69])extraBox(2.65,.15,.13,woodReal,8,.94,3.25+dz);
+ for(const dx of [-1.05,1.05])for(const dz of [-.52,.52])extraBox(.12,.72,.12,steel,8+dx,.36,3.25+dz);
+ for(const [dx,dz] of [[-1.18,-.62],[0,-.62],[1.18,-.62],[-1.18,.62],[0,.62],[1.18,.62]]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.025,16),new THREE.MeshStandardMaterial({color:0x101513}));p.position.set(8+dx,.94,3.25+dz);extra.add(p)}
+ // Pantry island, fridge and coffee station.
+ extraBox(2.2,.9,.72,creamReal,3.8,.45,-5.25);extraBox(2.22,.08,.74,woodReal,3.8,.94,-5.25);
+ extraBox(.62,1.85,.68,steel,5.45,.92,-5.55);extraBox(.38,.5,.35,woodReal,3.15,1.22,-5.2);
+ const mug=new THREE.Mesh(new THREE.CylinderGeometry(.11,.09,.16,16),creamReal);mug.position.set(4.05,1.07,-5.2);extra.add(mug);
+ const lamp=new THREE.PointLight(0xffd9a8,8,5);lamp.position.set(4,2.45,-5.2);scene.add(lamp);
+ document.getElementById('status').textContent='Realistic 3D office loaded • Pantry & billiards added';
 },undefined,err=>{document.getElementById('status').textContent='3D asset server unavailable; showing built-in office. Reload to retry.';console.error(err)});
 function person(name,role,color,x,z,owner=false){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.8,10),mat(color));body.position.y=1.05;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,24,20),mat(0xe5b68c));head.position.y=1.62;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.24,24,16,0,Math.PI*2,0,Math.PI/2),mat(owner?0x30231e:0x352820));hair.position.y=1.73;g.add(hair);for(let dx of [-.13,.13]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.48,.15),mat(0x252b32));leg.position.set(dx,.32,0);g.add(leg)}g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6};scene.add(g);return g}
 const agents=[person('Michael','General Manager • supervises office',0x355c8a,-9,-4.7),person('Emma','Guest Relations • guest inquiries',0x9a557d,-5,-4.7),person('Jake','Booking Coordinator • availability',0x477c9c,-1,-4.7),person('Ryan','Payment Monitor • hands off payment to owner',0x9b7644,3,-4.7)];
