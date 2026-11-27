@@ -80,7 +80,7 @@ const oldEnvironment=scene.children.slice();
 const gltfLoader=new GLTFLoader();
 document.getElementById('status').textContent='Loading realistic 3D furniture and office models…';
 gltfLoader.load('https://cdn.3dassets.dev/assets/17066/v1/model.glb',gltf=>{
- oldEnvironment.forEach(o=>{if(!o.isLight)o.visible=false});
+ // Keep the built-in office floor, walls, room dividers and labels visible behind the imported 3D furniture.
  const officeModel=gltf.scene;officeModel.position.set(0,0,0);scene.add(officeModel);
  officeModel.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.roughness=Math.max(.45,o.material.roughness??.7)}}});
  // Add a dedicated pantry counter and billiards table to the realistic asset scene.
