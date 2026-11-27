@@ -15,13 +15,43 @@ nav{display:flex;gap:6px;flex-wrap:wrap;background:#15231a;padding:7px;position:
 #panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#17251df2;border:1px solid #718768;border-radius:12px;padding:18px;max-width:320px;width:calc(100% - 36px);display:none;z-index:4}#panel h3{margin:0 0 8px;color:#e5bd69}#panel p{color:#d1ddce;margin:0 0 12px}
 #bottom{height:48px;background:#0b130e;color:#b9c8b3;padding:9px 14px;font-size:11px;display:flex;justify-content:space-between;gap:8px}
 @media(pointer:coarse){#joystick{display:block}#hint{max-width:165px;font-size:10px}#lookTip{left:50%;bottom:170px;white-space:nowrap}}
+
+/* Premium control-room interface */
+header{background:linear-gradient(110deg,#08120d 0%,#1d3325 55%,#111e16 100%);box-shadow:0 5px 24px #0008}
+.brand{font-size:14px;text-shadow:0 2px 12px #d9b66b44}
+nav{background:linear-gradient(90deg,#132219,#1b2d20);border-bottom:1px solid #60775b;box-shadow:0 5px 18px #0005}
+button{transition:transform .18s ease,filter .18s ease,background .18s ease;box-shadow:0 3px 10px #0003}
+button:active{transform:translateY(1px) scale(.98)}
+#hud{box-shadow:0 8px 24px #0006;backdrop-filter:blur(12px);background:linear-gradient(135deg,#0a160feF,#1b3024e8)}
+#hint{box-shadow:0 8px 24px #0006;backdrop-filter:blur(12px)}
+#teamPanel{position:absolute;right:12px;top:108px;width:244px;max-height:48%;overflow:auto;padding:11px;border:1px solid #82936c;border-radius:13px;background:linear-gradient(145deg,#0a160feF,#1c3025ed);box-shadow:0 12px 30px #0008;backdrop-filter:blur(12px);z-index:2}
+#teamPanel h3{font-size:12px;letter-spacing:.12em;color:#e5bd69;margin:0 0 8px}
+.agentCard{display:flex;align-items:center;gap:8px;padding:8px 7px;margin:6px 0;border:1px solid #64765a88;border-radius:9px;background:#23372abf;cursor:pointer}
+.agentCard:active{background:#3a5038}
+.agentDot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor}
+.agentMeta{min-width:0;flex:1}.agentMeta b{font-size:11px;display:block;color:#f5edda}.agentMeta small{font-size:10px;color:#b9c8b3;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agentState{font-size:9px;color:#e5bd69;white-space:nowrap}
+#activityLine{margin-top:8px;padding:8px;border-radius:8px;background:#0b160f;border:1px solid #566b4e;color:#d8e1d2;font-size:10px;line-height:1.45}
+#activityLine b{color:#e5bd69}
+#panel{box-shadow:0 16px 48px #000b;backdrop-filter:blur(16px)}
+#bottom{border-top:1px solid #526b50;background:linear-gradient(90deg,#09130d,#1a2c20);align-items:center}
+@media(pointer:coarse){#teamPanel{top:auto;bottom:164px;right:8px;width:min(190px,48vw);max-height:34%;padding:8px}#teamPanel h3{font-size:10px}.agentCard{padding:6px 5px;gap:6px;margin:4px 0}.agentMeta b{font-size:10px}.agentMeta small{font-size:9px}#activityLine{font-size:9px;padding:6px}#hint{top:12px}#hud{max-width:155px;font-size:11px}}
+
 </style></head><body>
 <header><div class="brand">🏡 PAHINGAHAN AI OFFICE <small>3D VIRTUAL HEADQUARTERS</small></div><span style="font-size:11px;color:#b9c8b3">OWNER MODE</span></header>
 <nav><button id="fp" class="active">First-person view</button><button id="top">Office overview</button><button id="reset">Reset position</button><button id="closePanel">Close info</button></nav>
 <div id="stage"><canvas id="view"></canvas>
 <div id="hud"><b>PAHINGAHAN HQ</b><small id="modeText">First-person • Walk around</small><small id="status">You are the owner</small></div>
 <div id="hint">Phone: use joystick to walk and drag the screen to look around. Computer: WASD + mouse.</div>
-<div id="joystick"><div id="stick"></div></div><div id="lookTip">Tap a character or workstation to inspect</div>
+<div id="joystick"><div id="stick"></div></div><div id="lookTip">Tap a team member to inspect • Drag to look around</div>
+<aside id="teamPanel">
+  <h3>✦ LIVE TEAM ACTIVITY</h3>
+  <div class="agentCard" data-agent="0"><span class="agentDot" style="color:#6da8e4;background:#6da8e4"></span><span class="agentMeta"><b>Michael · General Manager</b><small id="task0">Reviewing daily operations</small></span><span class="agentState" id="state0">WORKING</span></div>
+  <div class="agentCard" data-agent="1"><span class="agentDot" style="color:#d58bb6;background:#d58bb6"></span><span class="agentMeta"><b>Emma · Guest Relations</b><small id="task1">Checking guest inquiries</small></span><span class="agentState" id="state1">ONLINE</span></div>
+  <div class="agentCard" data-agent="2"><span class="agentDot" style="color:#76c5d7;background:#76c5d7"></span><span class="agentMeta"><b>Jake · Booking Coordinator</b><small id="task2">Reviewing room availability</small></span><span class="agentState" id="state2">WORKING</span></div>
+  <div class="agentCard" data-agent="3"><span class="agentDot" style="color:#d9ae67;background:#d9ae67"></span><span class="agentMeta"><b>Ryan · Payment Monitor</b><small id="task3">Waiting for owner payment handoff</small></span><span class="agentState" id="state3">STANDBY</span></div>
+  <div id="activityLine"><b>OFFICE STATUS</b><br><span id="officeStatus">All 4 agents are online in the virtual office.</span></div>
+</aside>
 <div id="panel"><h3 id="panelTitle">Office</h3><p id="panelText">Welcome to Pahingahan HQ.</p><button id="panelOk" class="primary">Okay</button></div>
 <div id="actions"><button id="toggleView" class="primary">Switch view</button></div></div>
 <div id="bottom"><span>3D environment preview • Owner-controlled</span><span>AI tasks and booking integrations are next phase</span></div>
@@ -76,6 +106,30 @@ pool();
 box(3,.95,.8,cream,8,.48,-5.4);box(.8,1.8,.8,metal,9.7,.9,-6.5);box(.35,.45,.35,trim,7.2,1.1,-5.4);box(.5,.15,.35,mat(0x33251c),7.2,1.4,-5.4);
 function table(x,z){box(2,.12,1,wood,x,.8,z);for(let dx of [-.8,.8])for(let dz of [-.35,.35])box(.12,.8,.12,trim,x+dx,.4,z+dz)}
 table(-5,1);table(0,1);table(4,1);
+
+/* Architectural polish: illuminated windows, timber skirting, rugs and ceiling pendants */
+const glassMat=new THREE.MeshPhysicalMaterial({color:0x8bb8b0,roughness:.18,metalness:.12,transparent:true,opacity:.32,emissive:0x1b4741,emissiveIntensity:.18});
+const frameMat=new THREE.MeshStandardMaterial({color:0x33261d,roughness:.7});
+for(const side of [-1,1]){
+  for(const z of [-5.8,0,5.8]){
+    const frame=new THREE.Group();
+    const pane=new THREE.Mesh(new THREE.BoxGeometry(.045,1.35,2.25),glassMat);pane.position.set(side*10.84,1.55,z);frame.add(pane);
+    for(const y of [.86,2.24]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.12,.09,2.45),frameMat);rail.position.set(side*10.82,y,z);frame.add(rail)}
+    for(const dz of [-1.18,1.18]){const stile=new THREE.Mesh(new THREE.BoxGeometry(.12,1.48,.09),frameMat);stile.position.set(side*10.82,1.55,z+dz);frame.add(stile)}
+    const mullion=new THREE.Mesh(new THREE.BoxGeometry(.13,1.35,.07),frameMat);mullion.position.set(side*10.81,1.55,z);frame.add(mullion);scene.add(frame);
+  }
+}
+// Soft lounge rugs and reception mats
+const rugMat=new THREE.MeshStandardMaterial({color:0x344c3c,roughness:1});
+for(const [x,z,w,d] of [[-8,1.3,3.2,2.4],[8,1.2,3.1,2.3],[-8,5.8,3.2,2.1],[-5,1,2.8,1.7]]){
+ const rug=new THREE.Mesh(new THREE.PlaneGeometry(w,d),rugMat);rug.rotation.x=-Math.PI/2;rug.position.set(x,.012,z);rug.receiveShadow=true;scene.add(rug);
+}
+// Warm pendant lights with metallic shades
+for(const [x,z] of [[-8,-2],[-3,-2],[3,-2],[8,-2],[-8,3],[0,3],[8,3]]){
+ const cord=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.7,8),frameMat);cord.position.set(x,2.9,z);scene.add(cord);
+ const shade=new THREE.Mesh(new THREE.ConeGeometry(.28,.2,18,1,true),new THREE.MeshStandardMaterial({color:0xb58b4e,metalness:.55,roughness:.38,side:THREE.DoubleSide}));shade.position.set(x,2.52,z);scene.add(shade);
+ const glow=new THREE.PointLight(0xffd69a,7,5,2);glow.position.set(x,2.35,z);scene.add(glow);
+}
 const oldEnvironment=scene.children.slice();
 const gltfLoader=new GLTFLoader();
 document.getElementById('status').textContent='Loading realistic 3D furniture and office models…';
@@ -103,7 +157,21 @@ gltfLoader.load('https://cdn.3dassets.dev/assets/17066/v1/model.glb',gltf=>{
  const lamp=new THREE.PointLight(0xffd9a8,8,5);lamp.position.set(4,2.45,-5.2);scene.add(lamp);
  document.getElementById('status').textContent='Realistic 3D office loaded • Pantry & billiards added';
 },undefined,err=>{document.getElementById('status').textContent='3D asset server unavailable; showing built-in office. Reload to retry.';console.error(err)});
-function person(name,role,color,x,z,owner=false){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.8,10),mat(color));body.position.y=1.05;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,24,20),mat(0xe5b68c));head.position.y=1.62;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.24,24,16,0,Math.PI*2,0,Math.PI/2),mat(owner?0x30231e:0x352820));hair.position.y=1.73;g.add(hair);for(let dx of [-.13,.13]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.48,.15),mat(0x252b32));leg.position.set(dx,.32,0);g.add(leg)}g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6};scene.add(g);return g}
+function person(name,role,color,x,z,owner=false){
+ let g=new THREE.Group();const skin=mat(0xd9a77f,.82),shirt=mat(color,.72),pants=mat(0x26313a,.9),shoe=mat(0x171b1b,.65),hairMat=mat(owner?0x241b18:0x34251e,.9);
+ const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.55,5,10),shirt);torso.position.y=1.12;torso.castShadow=true;g.add(torso);
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.085,.09,.16,12),skin);neck.position.y=1.51;g.add(neck);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.235,24,20),skin);head.position.y=1.72;head.castShadow=true;g.add(head);
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,24,16,0,Math.PI*2,0,Math.PI/2),hairMat);hair.position.y=1.82;g.add(hair);
+ for(const dx of [-.085,.085]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.022,10,8),new THREE.MeshBasicMaterial({color:0x241c18}));eye.position.set(dx,1.73,.207);g.add(eye)}
+ const armPivots=[];
+ for(const dx of [-.34,.34]){const arm=new THREE.Group();arm.position.set(dx,1.34,0);const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.36,4,8),shirt);sleeve.rotation.z=dx<0?-.18:.18;sleeve.position.y=-.19;arm.add(sleeve);const hand=new THREE.Mesh(new THREE.SphereGeometry(.075,12,10),skin);hand.position.set(0,-.43,.02);arm.add(hand);g.add(arm);armPivots.push(arm)}
+ for(const dx of [-.14,.14]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.09,.38,4,8),pants);leg.position.set(dx,.36,0);g.add(leg);const foot=new THREE.Mesh(new THREE.BoxGeometry(.17,.11,.29),shoe);foot.position.set(dx,.09,.07);g.add(foot)}
+ const lanyard=new THREE.Mesh(new THREE.BoxGeometry(.035,.34,.025),new THREE.MeshStandardMaterial({color:0xe5bd69,metalness:.2}));lanyard.position.set(0,1.28,.275);g.add(lanyard);
+ const badge=new THREE.Mesh(new THREE.BoxGeometry(.16,.19,.035),new THREE.MeshStandardMaterial({color:0xf1e7ce,roughness:.55}));badge.position.set(0,1.14,.29);g.add(badge);
+ const badgeMark=new THREE.Mesh(new THREE.BoxGeometry(.08,.035,.012),new THREE.MeshBasicMaterial({color:0x35563d}));badgeMark.position.set(0,1.16,.312);g.add(badgeMark);
+ g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6,arms:armPivots,owner};scene.add(g);return g
+}
 const agents=[person('Michael','General Manager • supervises office',0x355c8a,-9,-4.7),person('Emma','Guest Relations • guest inquiries',0x9a557d,-5,-4.7),person('Jake','Booking Coordinator • availability',0x477c9c,-1,-4.7),person('Ryan','Payment Monitor • hands off payment to owner',0x9b7644,3,-4.7)];
 const owner=person('YOU • OWNER','You control this avatar and approve bookings',0xd4a64e,0,3.8,true);
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let firstPerson=true,yaw=0,pitch=0,keys={},move={x:0,y:0},drag=null,lastX=0,lastY=0,topPos=new THREE.Vector3(0,19,19);
@@ -117,9 +185,36 @@ canvas.addEventListener('pointermove',e=>{if(drag&&firstPerson){let dx=e.clientX
 canvas.addEventListener('pointerup',e=>{if(drag){if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)<5){pointer.x=(e.clientX/stage.clientWidth)*2-1;pointer.y=-(e.clientY/stage.clientHeight)*2+1;raycaster.setFromCamera(pointer,camera);let hits=raycaster.intersectObjects([...agents,...owner.children],true);if(hits.length){let obj=hits[0].object;let p=obj;while(p&&!p.userData.name)p=p.parent;if(p&&p.userData.name)show(p.userData.name,p.userData.role)}}drag=null}});
 const joy=document.getElementById('joystick'),stick=document.getElementById('stick');let joyOn=false;function joyMove(e){let r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=43;if(len>max){dx=dx/len*max;dy=dy/len*max}stick.style.transform='translate('+dx+'px,'+dy+'px)';move.x=dx/max;move.y=dy/max}
 joy.addEventListener('pointerdown',e=>{joyOn=true;joy.setPointerCapture(e.pointerId);joyMove(e)});joy.addEventListener('pointermove',e=>{if(joyOn)joyMove(e)});function joyEnd(){joyOn=false;move.x=0;move.y=0;stick.style.transform=''}joy.addEventListener('pointerup',joyEnd);joy.addEventListener('pointercancel',joyEnd);
+
+const activityPlans=[
+ [{state:'WORKING',task:'Reviewing daily operations',detail:'Checking team workload and office performance.'},{state:'IN MEETING',task:'Preparing team priorities',detail:'Organizing the next office action list.'},{state:'WORKING',task:'Monitoring service quality',detail:'Reviewing the guest experience workflow.'}],
+ [{state:'ONLINE',task:'Checking guest inquiries',detail:'Sorting new questions and preparing helpful replies.'},{state:'REPLYING',task:'Preparing guest responses',detail:'Drafting answers about rates and stay details.'},{state:'FOLLOW-UP',task:'Following up guest requests',detail:'Keeping track of conversations that need attention.'}],
+ [{state:'WORKING',task:'Reviewing room availability',detail:'Checking the booking calendar for requested dates.'},{state:'CHECKING',task:'Checking booking details',detail:'Reviewing dates, guest count and stay duration.'},{state:'WORKING',task:'Updating booking queue',detail:'Organizing pending booking requests for owner review.'}],
+ [{state:'STANDBY',task:'Waiting for owner payment handoff',detail:'Payment and final confirmation remain under owner control.'},{state:'MONITORING',task:'Monitoring payment handoffs',detail:'Watching for bookings that need the owner to review payment.'},{state:'STANDBY',task:'Ready for owner review',detail:'No payment is collected automatically by this demo.'}]
+];
+let currentPlan=[0,0,0,0],lastPlanTick=-1;
+function updateTeamActivity(){
+ const tick=Math.floor(clock.elapsedTime/9);
+ if(tick!==lastPlanTick){lastPlanTick=tick;currentPlan=currentPlan.map((v,i)=>(v+1)%activityPlans[i].length)}
+ currentPlan.forEach((v,i)=>{const item=activityPlans[i][v];const task=document.getElementById('task'+i),state=document.getElementById('state'+i);if(task)task.textContent=item.task;if(state)state.textContent=item.state});
+ const active=currentPlan.map((v,i)=>activityPlans[i][v].state);
+ const working=active.filter(x=>x==='WORKING'||x==='REPLYING'||x==='CHECKING').length;
+ const line=document.getElementById('officeStatus');if(line)line.textContent=working+' agents handling office tasks • Owner retains payment and final booking approval.';
+}
+document.querySelectorAll('.agentCard').forEach(card=>card.addEventListener('click',()=>{
+ const i=Number(card.dataset.agent),a=agents[i],item=activityPlans[i][currentPlan[i]];
+ if(a)show(a.userData.name,item.detail+' This is a visual activity preview; live AI task execution will be connected in a later integration step.');
+}));
+
 let clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04),t=clock.elapsedTime;
-agents.forEach((a,i)=>{a.position.x=a.userData.baseX+Math.sin(t*.32+i*2)*.7;a.position.z=a.userData.baseZ+Math.cos(t*.28+i*2)*.45;a.rotation.y=Math.sin(t*.4+i)*.25});
+agents.forEach((a,i)=>{
+ const phase=t*.8+a.userData.phase;
+ a.position.x=a.userData.baseX+Math.sin(t*.32+i*2)*.34;
+ a.position.z=a.userData.baseZ+Math.cos(t*.28+i*2)*.22;
+ a.rotation.y=Math.sin(t*.4+i)*.22;
+ if(a.userData.arms){a.userData.arms[0].rotation.x=Math.sin(phase*1.8)*.28-.12;a.userData.arms[1].rotation.x=Math.cos(phase*1.8)*.28-.12}
+ });
 if(firstPerson){let forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)-move.y;let side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+move.x;let len=Math.hypot(forward,side);if(len>1){forward/=len;side/=len}let speed=4.2*dt;owner.position.x+= (Math.cos(yaw)*side+Math.sin(yaw)*forward)*speed;owner.position.z+= (Math.sin(yaw)*side-Math.cos(yaw)*forward)*speed;owner.position.x=THREE.MathUtils.clamp(owner.position.x,-10.2,10.2);owner.position.z=THREE.MathUtils.clamp(owner.position.z,-7.2,7.2);camera.position.set(owner.position.x,1.68,owner.position.z);camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0)}else{camera.position.lerp(topPos,.06);camera.lookAt(0,0,0)}
-renderer.render(scene,camera)}animate();setMode(true);
+updateTeamActivity();renderer.render(scene,camera)}animate();setMode(true);
 })();
 </script></body></html>
