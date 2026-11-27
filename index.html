@@ -27,9 +27,10 @@ nav{display:flex;gap:6px;flex-wrap:wrap;background:#15231a;padding:7px;position:
 <div id="bottom"><span>3D environment preview • Owner-controlled</span><span>AI tasks and booking integrations are next phase</span></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 (()=>{
 const canvas=document.getElementById('view'),stage=document.getElementById('stage');
-if(!window.THREE){document.getElementById('status').textContent='3D engine is still loading. Trying backup CDN…';const backup=document.createElement('script');backup.src='https://unpkg.com/three@0.160.0/build/three.min.js';backup.onload=()=>location.reload();backup.onerror=()=>{document.getElementById('status').textContent='Hindi ma-load ang 3D engine. Check internet, then reload.';document.getElementById('hint').textContent='Tip: buksan sa Chrome at siguraduhing may internet. Kung naka-Data Saver, i-off muna.'};document.head.appendChild(backup);return}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x17251d);scene.fog=new THREE.Fog(0x17251d,22,48);
 let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true, powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;}catch(err){document.getElementById('status').textContent='Hindi suportado o naka-block ang WebGL sa browser na ito.';document.getElementById('hint').textContent='Subukan ang Chrome update, i-off ang Data Saver at i-reload. Error: '+err.message;return}
 const camera=new THREE.PerspectiveCamera(70,1,.1,100);camera.position.set(0,1.7,7);
@@ -75,9 +76,18 @@ pool();
 box(3,.95,.8,cream,8,.48,-5.4);box(.8,1.8,.8,metal,9.7,.9,-6.5);box(.35,.45,.35,trim,7.2,1.1,-5.4);box(.5,.15,.35,mat(0x33251c),7.2,1.4,-5.4);
 function table(x,z){box(2,.12,1,wood,x,.8,z);for(let dx of [-.8,.8])for(let dz of [-.35,.35])box(.12,.8,.12,trim,x+dx,.4,z+dz)}
 table(-5,1);table(0,1);table(4,1);
+const oldEnvironment=scene.children.slice();
+const gltfLoader=new GLTFLoader();
+document.getElementById('status').textContent='Loading realistic 3D furniture and office models…';
+gltfLoader.load('https://cdn.3dassets.dev/assets/17066/v1/model.glb',gltf=>{
+ oldEnvironment.forEach(o=>{if(!o.isLight)o.visible=false});
+ const officeModel=gltf.scene;officeModel.position.set(0,0,0);scene.add(officeModel);
+ officeModel.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.roughness=Math.max(.45,o.material.roughness??.7)}}});
+ document.getElementById('status').textContent='Realistic office assets loaded • 3D mode';
+},undefined,err=>{document.getElementById('status').textContent='3D asset server unavailable; showing built-in office. Reload to retry.';console.error(err)});
 function person(name,role,color,x,z,owner=false){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.8,10),mat(color));body.position.y=1.05;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,24,20),mat(0xe5b68c));head.position.y=1.62;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.24,24,16,0,Math.PI*2,0,Math.PI/2),mat(owner?0x30231e:0x352820));hair.position.y=1.73;g.add(hair);for(let dx of [-.13,.13]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.48,.15),mat(0x252b32));leg.position.set(dx,.32,0);g.add(leg)}g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6};scene.add(g);return g}
 const agents=[person('Michael','General Manager • supervises office',0x355c8a,-9,-4.7),person('Emma','Guest Relations • guest inquiries',0x9a557d,-5,-4.7),person('Jake','Booking Coordinator • availability',0x477c9c,-1,-4.7),person('Ryan','Payment Monitor • hands off payment to owner',0x9b7644,3,-4.7)];
-const owner=person('YOU • OWNER','You control this avatar and approve bookings',0xd4a64e,0,6,true);
+const owner=person('YOU • OWNER','You control this avatar and approve bookings',0xd4a64e,0,3.8,true);
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let firstPerson=true,yaw=0,pitch=0,keys={},move={x:0,y:0},drag=null,lastX=0,lastY=0,topPos=new THREE.Vector3(0,19,19);
 function setMode(fp){firstPerson=fp;document.getElementById('fp').classList.toggle('active',fp);document.getElementById('top').classList.toggle('active',!fp);document.getElementById('modeText').textContent=fp?'First-person • Walk around':'Isometric overview';document.getElementById('lookTip').style.display=fp?'block':'none';if(!fp){camera.position.copy(topPos);camera.lookAt(0,0,0)}else{camera.position.set(owner.position.x,1.7,owner.position.z);camera.rotation.set(0,yaw,0)}}
 document.getElementById('fp').onclick=()=>setMode(true);document.getElementById('top').onclick=()=>setMode(false);document.getElementById('toggleView').onclick=()=>setMode(!firstPerson);document.getElementById('reset').onclick=()=>{owner.position.set(0,0,6);yaw=0;pitch=0;setMode(true)};
