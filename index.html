@@ -31,12 +31,27 @@ nav{display:flex;gap:6px;flex-wrap:wrap;background:#15231a;padding:7px;position:
 const canvas=document.getElementById('view'),stage=document.getElementById('stage');
 if(!window.THREE){document.getElementById('status').textContent='3D engine is still loading. Trying backup CDN…';const backup=document.createElement('script');backup.src='https://unpkg.com/three@0.160.0/build/three.min.js';backup.onload=()=>location.reload();backup.onerror=()=>{document.getElementById('status').textContent='Hindi ma-load ang 3D engine. Check internet, then reload.';document.getElementById('hint').textContent='Tip: buksan sa Chrome at siguraduhing may internet. Kung naka-Data Saver, i-off muna.'};document.head.appendChild(backup);return}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x17251d);scene.fog=new THREE.Fog(0x17251d,22,48);
-let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true, powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;}catch(err){document.getElementById('status').textContent='Hindi suportado o naka-block ang WebGL sa browser na ito.';document.getElementById('hint').textContent='Subukan ang Chrome update, i-off ang Data Saver at i-reload. Error: '+err.message;return}
+let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true, powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;}catch(err){document.getElementById('status').textContent='Hindi suportado o naka-block ang WebGL sa browser na ito.';document.getElementById('hint').textContent='Subukan ang Chrome update, i-off ang Data Saver at i-reload. Error: '+err.message;return}
 const camera=new THREE.PerspectiveCamera(70,1,.1,100);camera.position.set(0,1.7,7);
 scene.add(new THREE.HemisphereLight(0xe8f1dc,0x55402d,2));
-const sun=new THREE.DirectionalLight(0xffe1b0,2.2);sun.position.set(-8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
-const mat=(color,roughness=.85)=>new THREE.MeshStandardMaterial({color,roughness});
-const floorMat=mat(0x9a7952),wallMat=mat(0x5b4635),trim=mat(0x33271f),wood=mat(0x79563a),deskMat=mat(0x4c3528),green=mat(0x176c4a),cream=mat(0xe5d1a5),metal=mat(0x68716e),screen=mat(0x243d49),leaf=mat(0x477a46);
+const sun=new THREE.DirectionalLight(0xffe8c8,3.1);sun.position.set(-8,16,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=18;sun.shadow.camera.bottom=-18;sun.shadow.bias=-.00025;scene.add(sun);
+const fill=new THREE.DirectionalLight(0xc3d7e9,.75);fill.position.set(10,8,-10);scene.add(fill);
+for(const [x,z] of [[-8,-5],[-3,-5],[3,-5],[8,-5],[-8,5],[0,5],[8,5]]){const lamp=new THREE.PointLight(0xffd39a,18,7,2);lamp.position.set(x,2.3,z);scene.add(lamp)}
+function surfaceTexture(hex,kind='plain'){
+ const cv=document.createElement('canvas');cv.width=512;cv.height=512;const ctx=cv.getContext('2d');
+ const col='#'+hex.toString(16).padStart(6,'0');ctx.fillStyle=col;ctx.fillRect(0,0,512,512);
+ let seed=hex>>>0;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+ if(kind==='wood'||kind==='floor'){
+  for(let y=0;y<512;y+=kind==='floor'?64:512){ctx.fillStyle='rgba(30,18,10,.25)';ctx.fillRect(0,y,512,2);for(let k=0;k<18;k++){let yy=y+rand()*(kind==='floor'?62:512);ctx.strokeStyle='rgba(255,224,174,'+(0.025+rand()*.07)+')';ctx.lineWidth=1+rand()*2;ctx.beginPath();ctx.moveTo(0,yy);ctx.bezierCurveTo(130,yy-8,330,yy+8,512,yy);ctx.stroke()}}
+ } else if(kind==='wall'){
+  for(let i=0;i<1600;i++){ctx.fillStyle=rand()>.5?'rgba(255,255,255,.035)':'rgba(0,0,0,.045)';ctx.fillRect(rand()*512,rand()*512,1+rand()*3,1+rand()*3)}
+ } else {
+  for(let i=0;i<2600;i++){ctx.fillStyle=rand()>.5?'rgba(255,255,255,.025)':'rgba(0,0,0,.035)';ctx.fillRect(rand()*512,rand()*512,1,1)}
+ }
+ const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.colorSpace=THREE.SRGBColorSpace;return tex;
+}
+const mat=(color,roughness=.85,kind='plain')=>{const texture=surfaceTexture(color,kind);return new THREE.MeshStandardMaterial({map:texture,color:0xffffff,roughness,bumpMap:texture,bumpScale:kind==='floor'||kind==='wood'?.045:.012})};
+const floorMat=mat(0x9a7952,.92,'floor'),wallMat=mat(0x5b4635,.95,'wall'),trim=mat(0x33271f),wood=mat(0x79563a,.72,'wood'),deskMat=mat(0x4c3528,.68,'wood'),green=mat(0x176c4a,.96),cream=mat(0xe5d1a5,.8),metal=mat(0x68716e,.4),screen=mat(0x243d49,.35),leaf=mat(0x477a46,.9);
 function box(w,h,d,m,x,y,z,shadow=true){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o}
 box(22,.3,16,floorMat,0,-.18,0);
 function wall(w,h,d,x,y,z){return box(w,h,d,wallMat,x,y,z)}
@@ -60,7 +75,7 @@ pool();
 box(3,.95,.8,cream,8,.48,-5.4);box(.8,1.8,.8,metal,9.7,.9,-6.5);box(.35,.45,.35,trim,7.2,1.1,-5.4);box(.5,.15,.35,mat(0x33251c),7.2,1.4,-5.4);
 function table(x,z){box(2,.12,1,wood,x,.8,z);for(let dx of [-.8,.8])for(let dz of [-.35,.35])box(.12,.8,.12,trim,x+dx,.4,z+dz)}
 table(-5,1);table(0,1);table(4,1);
-function person(name,role,color,x,z,owner=false){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.8,10),mat(color));body.position.y=1.05;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,14,12),mat(0xe5b68c));head.position.y=1.62;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8,0,Math.PI*2,0,Math.PI/2),mat(owner?0x30231e:0x352820));hair.position.y=1.73;g.add(hair);for(let dx of [-.13,.13]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.48,.15),mat(0x252b32));leg.position.set(dx,.32,0);g.add(leg)}g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6};scene.add(g);return g}
+function person(name,role,color,x,z,owner=false){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.8,10),mat(color));body.position.y=1.05;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,24,20),mat(0xe5b68c));head.position.y=1.62;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.24,24,16,0,Math.PI*2,0,Math.PI/2),mat(owner?0x30231e:0x352820));hair.position.y=1.73;g.add(hair);for(let dx of [-.13,.13]){let leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.48,.15),mat(0x252b32));leg.position.set(dx,.32,0);g.add(leg)}g.position.set(x,0,z);g.userData={name,role,baseX:x,baseZ:z,phase:Math.random()*6};scene.add(g);return g}
 const agents=[person('Michael','General Manager • supervises office',0x355c8a,-9,-4.7),person('Emma','Guest Relations • guest inquiries',0x9a557d,-5,-4.7),person('Jake','Booking Coordinator • availability',0x477c9c,-1,-4.7),person('Ryan','Payment Monitor • hands off payment to owner',0x9b7644,3,-4.7)];
 const owner=person('YOU • OWNER','You control this avatar and approve bookings',0xd4a64e,0,6,true);
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let firstPerson=true,yaw=0,pitch=0,keys={},move={x:0,y:0},drag=null,lastX=0,lastY=0,topPos=new THREE.Vector3(0,19,19);
