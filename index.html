@@ -25,13 +25,13 @@ nav{display:flex;gap:6px;flex-wrap:wrap;background:#15231a;padding:7px;position:
 <div id="panel"><h3 id="panelTitle">Office</h3><p id="panelText">Welcome to Pahingahan HQ.</p><button id="panelOk" class="primary">Okay</button></div>
 <div id="actions"><button id="toggleView" class="primary">Switch view</button></div></div>
 <div id="bottom"><span>3D environment preview • Owner-controlled</span><span>AI tasks and booking integrations are next phase</span></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 (()=>{
 const canvas=document.getElementById('view'),stage=document.getElementById('stage');
-if(!window.THREE){document.getElementById('status').textContent='3D library did not load. Check internet connection.';return}
+if(!window.THREE){document.getElementById('status').textContent='3D engine is still loading. Trying backup CDN…';const backup=document.createElement('script');backup.src='https://unpkg.com/three@0.160.0/build/three.min.js';backup.onload=()=>location.reload();backup.onerror=()=>{document.getElementById('status').textContent='Hindi ma-load ang 3D engine. Check internet, then reload.';document.getElementById('hint').textContent='Tip: buksan sa Chrome at siguraduhing may internet. Kung naka-Data Saver, i-off muna.'};document.head.appendChild(backup);return}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x17251d);scene.fog=new THREE.Fog(0x17251d,22,48);
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true, powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;}catch(err){document.getElementById('status').textContent='Hindi suportado o naka-block ang WebGL sa browser na ito.';document.getElementById('hint').textContent='Subukan ang Chrome update, i-off ang Data Saver at i-reload. Error: '+err.message;return}
 const camera=new THREE.PerspectiveCamera(70,1,.1,100);camera.position.set(0,1.7,7);
 scene.add(new THREE.HemisphereLight(0xe8f1dc,0x55402d,2));
 const sun=new THREE.DirectionalLight(0xffe1b0,2.2);sun.position.set(-8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
@@ -67,7 +67,7 @@ const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let firstPerso
 function setMode(fp){firstPerson=fp;document.getElementById('fp').classList.toggle('active',fp);document.getElementById('top').classList.toggle('active',!fp);document.getElementById('modeText').textContent=fp?'First-person • Walk around':'Isometric overview';document.getElementById('lookTip').style.display=fp?'block':'none';if(!fp){camera.position.copy(topPos);camera.lookAt(0,0,0)}else{camera.position.set(owner.position.x,1.7,owner.position.z);camera.rotation.set(0,yaw,0)}}
 document.getElementById('fp').onclick=()=>setMode(true);document.getElementById('top').onclick=()=>setMode(false);document.getElementById('toggleView').onclick=()=>setMode(!firstPerson);document.getElementById('reset').onclick=()=>{owner.position.set(0,0,6);yaw=0;pitch=0;setMode(true)};
 function show(title,text){document.getElementById('panelTitle').textContent=title;document.getElementById('panelText').textContent=text;document.getElementById('panel').style.display='block'}document.getElementById('panelOk').onclick=()=>document.getElementById('panel').style.display='none';document.getElementById('closePanel').onclick=()=>document.getElementById('panel').style.display='none';
-function resize(){let w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}window.addEventListener('resize',resize);resize();
+function resize(){let w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}window.addEventListener('resize',resize);resize();
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&firstPerson){drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)}else if(e.pointerType==='touch'&&firstPerson){drag={x:e.clientX,y:e.clientY,look:true}}});
 canvas.addEventListener('pointermove',e=>{if(drag&&firstPerson){let dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;yaw-=dx*.004;pitch=Math.max(-.9,Math.min(.9,pitch-dy*.003));}});
