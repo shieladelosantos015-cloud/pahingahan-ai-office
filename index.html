@@ -138,12 +138,12 @@ function makeAgent(name,role,color,x,z,task,route){
  g.position.set(x,0,z);g.userData={name,role,task,home:new THREE.Vector3(x,0,z),route:route.map(p=>new THREE.Vector3(p[0],0,p[1])),target:0,arms,legs,phase:Math.random()*5,walk:true};scene.add(g);return g
 }
 const agents=[
- makeAgent('Michael','General Manager','0x3f6791',-7,-5.1,'Supervising operations',[[-7,-5.1],[-5.4,-4.8],[-7,-5.1]]),
- makeAgent('Emma','Guest Relations','0x9a5d82',-.1,-5.1,'Handling guest inquiries',[[-.1,-5.1],[-7,1.1],[-.1,-5.1]]),
- makeAgent('Jake','Booking Coordinator','0x397d91',6.7,-5.1,'Checking booking availability',[[6.7,-5.1],[5.4,-3.2],[6.7,-5.1]]),
- makeAgent('Ryan','Payment Monitor','0xa27b43',6.7,5.3,'Waiting for owner payment handoff',[[6.7,5.3],[7.7,4.3],[6.7,5.3]])
+ makeAgent('Michael','General Manager',0x3f6791,-7,-5.1,'Supervising operations',[[-7,-5.1],[-5.4,-4.8],[-7,-5.1]]),
+ makeAgent('Emma','Guest Relations',0x9a5d82,-.1,-5.1,'Handling guest inquiries',[[-.1,-5.1],[-7,1.1],[-.1,-5.1]]),
+ makeAgent('Jake','Booking Coordinator',0x397d91,6.7,-5.1,'Checking booking availability',[[6.7,-5.1],[5.4,-3.2],[6.7,-5.1]]),
+ makeAgent('Ryan','Payment Monitor',0xa27b43,6.7,5.3,'Waiting for owner payment handoff',[[6.7,5.3],[7.7,4.3],[6.7,5.3]])
 ];
-const owner=makeAgent('YOU · OWNER','Owner','0xc49b4d',-7,3.5,'You approve payments and final bookings',[[-7,3.5],[-7,3.5]]);
+const owner=makeAgent('YOU · OWNER','Owner',0xc49b4d,-7,3.5,'You approve payments and final bookings',[[-7,3.5],[-7,3.5]]);
 owner.userData.walk=false;
 const people=[...agents,owner];
 let clock=new THREE.Clock(),activityIndex=0,lastActivity=-1;
