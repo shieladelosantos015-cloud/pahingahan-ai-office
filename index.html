@@ -42,8 +42,8 @@ box(22,.3,16,floorMat,0,-.18,0);
 function wall(w,h,d,x,y,z){return box(w,h,d,wallMat,x,y,z)}
 // outer perimeter and room partitions, with open door gaps
 wall(22,2.7,.22,0,1.25,-8);wall(22,2.7,.22,0,1.25,8);wall(.22,2.7,16,-11,1.25,0);wall(.22,2.7,16,11,1.25,0);
-for(let x=-7;x<=7;x+=4)wall(.14,2.7,16,x,1.25,0);
-wall(22,2.7,.14,0,1.25,-3.2);wall(22,2.7,.14,0,1.25,3.2);
+for(let x=-7;x<=7;x+=4){wall(.14,2.7,6.5,x,1.25,-4.75);wall(.14,2.7,6.5,x,1.25,4.75)}
+for(let z of [-3.2,3.2]){wall(8,2.7,.14,-7,1.25,z);wall(8,2.7,.14,7,1.25,z)}
 // room signs
 function sign(text,x,z){let c=document.createElement('canvas');c.width=512;c.height=96;let ctx=c.getContext('2d');ctx.fillStyle='#33251c';ctx.fillRect(0,0,512,96);ctx.fillStyle='#f1dba8';ctx.font='bold 38px sans-serif';ctx.textAlign='center';ctx.fillText(text,256,62);let tex=new THREE.CanvasTexture(c);let m=new THREE.MeshBasicMaterial({map:tex});let o=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.6),m);o.position.set(x,2.45,z);scene.add(o)}
 sign('GENERAL MANAGER',-9,-7.86);sign('GUEST RELATIONS',-5,-7.86);sign('BOOKING DESK',-1,-7.86);sign('PAYMENT OFFICE',3,-7.86);sign('TEAM PANTRY',8,-7.86);sign('RECEPTION',-9,7.86);sign('MEETING ROOM',-5,7.86);sign('OPERATIONS FLOOR',2,7.86);sign('TEAM LOUNGE + BILLIARDS',8,7.86);
