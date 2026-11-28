@@ -144,7 +144,7 @@ button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 7px
 <label class="taskLabel">ASSIGN TO</label><select id="newTaskAgent" class="taskInput"><option>General Manager</option><option>Customer Relations</option><option>Client Hunting</option><option>Creative & Editing</option><option>Booking & Scheduling</option></select>
 <label class="taskLabel">PRIORITY</label><select id="newTaskPriority" class="taskInput"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>
 <div class="huntActions"><button id="createTask" class="gold">SAVE TASK TO CLOUD</button></div>
-<h3 style="color:var(--gold)">✦ CUSTOMER RELATIONS · AGENT WORK OUTPUT</h3><div id="agentWorkOutput" class="huntNotice">Completed AI-generated work will appear here.</div><h3 style="color:var(--gold)">📋 CLOUD TASKS</h3><div id="cloudTaskList"></div>
+<h3 style="color:var(--gold)">✦ CUSTOMER RELATIONS · AGENT WORK OUTPUT</h3><div id="agentWorkOutput" class="huntNotice">Completed AI-generated work will appear here.</div><h3 style="color:var(--gold)">📅 BOOKING INQUIRIES · OWNER REVIEW</h3><p style="color:#c5d2c0;font-size:11px">Messenger booking requests appear here. Review the guest details and payment first. Only press confirm after you have personally verified payment.</p><div id="bookingInquiryList" class="huntNotice">No booking inquiries loaded.</div><h3 style="color:var(--gold)">📋 CLOUD TASKS</h3><div id="cloudTaskList"></div>
 </section></div><div id="huntModal"><section id="huntPanel">
  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · CLIENT HUNTING</div><h2>Lead Finder & Reply Desk</h2></div><button id="huntClose">CLOSE ✕</button></div>
  <p>Assisted prospecting workspace. Ilagay ang public post details o inquiry na ikaw mismo ang may access. Gumagawa ito ng draft reply at lead record sa browser na ito.</p>
@@ -400,6 +400,9 @@ async function refresh(){
  try{
   const data=await api("/api/office");
   list.innerHTML=data.tasks.length?data.tasks.map(t=>'<div class="taskRow"><b>#'+t.id+' · '+escapeHtml(t.title)+'</b><br><small>'+escapeHtml(t.assigned_agent||"Unassigned")+' · '+escapeHtml(t.priority)+' · '+escapeHtml(t.status)+'</small>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+'<div class="huntActions">'+(t.assigned_agent==="Customer Relations"&&t.status!=="completed"?'<button data-run-agent="'+t.id+'" class="gold">RUN CUSTOMER RELATIONS</button>':'')+'<button data-task-status="'+t.id+'" data-status="in_progress">START</button><button data-task-status="'+t.id+'" data-status="completed">COMPLETE</button><button data-task-status="'+t.id+'" data-status="blocked">BLOCK</button></div></div>').join(""):'<p style="color:#b7c4ad">No cloud tasks yet.</p>';
+  const inquiryList=$("bookingInquiryList");
+  const inquiries=data.booking_inquiries||[];
+  inquiryList.innerHTML=inquiries.length?inquiries.map(b=>'<div class="taskRow"><b>#'+b.id+' · '+escapeHtml(b.client_name||"Waiting for client details")+'</b><br><small>'+escapeHtml(b.requested_date)+' · '+escapeHtml(b.guests||"—")+' guest(s) · '+escapeHtml(b.status)+'</small>'+(b.status==="awaiting_owner_payment"?'<p>Review payment with the client before confirming.</p><div class="huntActions"><button class="gold" data-confirm-booking="'+b.id+'">CONFIRM PAYMENT & BOOK</button></div>':'')+'</div>').join(""):'<p>No booking inquiries yet.</p>';
   const latestOutput=(data.memories||[]).find(m=>m.agent_name==="Customer Relations"&&String(m.memory||"").startsWith("Output for task #"));
   if(latestOutput&&$("agentWorkOutput").textContent==="Completed AI-generated work will appear here.") $("agentWorkOutput").textContent=latestOutput.memory;
   showStatus("Connected to Cloudflare D1 · "+data.tasks.length+" task(s) loaded.",true);
@@ -441,6 +444,16 @@ $("createTask").onclick=async()=>{
  catch(e){showStatus("Could not save task: "+e.message)}
 };
 list.addEventListener("click",async e=>{
+ const inquiryButton=e.target.closest("button[data-confirm-booking]");
+ if(inquiryButton){
+  const inquiryId=Number(inquiryButton.dataset.confirmBooking);
+  if(!confirm("Confirm that you personally verified payment, then create this booking in Google Calendar?")) return;
+  inquiryButton.disabled=true;inquiryButton.textContent="CREATING BOOKING...";
+  try{await api("/api/office/bookings/"+inquiryId+"/confirm-payment","POST",{});showStatus("Booking #"+inquiryId+" confirmed and added to Google Calendar.",true);await refresh();}
+  catch(err){showStatus("Booking was not created: "+err.message);inquiryButton.disabled=false;inquiryButton.textContent="RETRY CONFIRMATION";}
+  return;
+ }
+ 
  const runButton=e.target.closest("button[data-run-agent]");
  if(runButton){
   const output=$("agentWorkOutput"),taskId=Number(runButton.dataset.runAgent);
