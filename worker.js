@@ -237,22 +237,32 @@ async function buildCalendarImageUrl(env, monthInfo) {
   const errors = [];
   const today = manilaToday();
 
+  const datesToCheck = [];
   for (let day = 1; day <= daysInMonth; day++) {
     const date = makeDateString(year, month, day);
-    const x = (firstWeekday + day - 1) % 7;
-    const y = Math.floor((firstWeekday + day - 1) / 7);
-    if (date < today) continue;
-    try {
-      const result = await callGoogleCalendar(env, { action:'availability', date });
-      if (!result || result.success !== true || typeof result.available !== 'boolean') {
+    if (date >= today) datesToCheck.push({ day, date });
+  }
+  for (let offset = 0; offset < datesToCheck.length; offset += 5) {
+    const batch = datesToCheck.slice(offset, offset + 5);
+    const results = await Promise.all(batch.map(async item => {
+      try {
+        const result = await callGoogleCalendar(env, { action:'availability', date:item.date });
+        return { item, result };
+      } catch (error) {
+        console.error('Calendar image date check failed:', item.date, error && error.message);
+        return { item, error:true };
+      }
+    }));
+    for (const entry of results) {
+      const { day, date } = entry.item;
+      const x = (firstWeekday + day - 1) % 7;
+      const y = Math.floor((firstWeekday + day - 1) / 7);
+      if (entry.error || !entry.result || entry.result.success !== true || typeof entry.result.available !== 'boolean') {
         errors.push(date);
         continue;
       }
       const point = { x, y, day, v:day };
-      (result.available ? available : unavailable).push(point);
-    } catch (error) {
-      console.error('Calendar image date check failed:', date, error && error.message);
-      errors.push(date);
+      (entry.result.available ? available : unavailable).push(point);
     }
   }
 
