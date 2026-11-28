@@ -338,7 +338,12 @@ let connectedKey=sessionStorage.getItem(keyName)||"";
 keyInput.value=connectedKey;
 async function api(path,method="GET",body){
  const key=connectedKey||keyInput.value.trim();
- const res=await fetch(API+path,{method,headers:{"Content-Type":"application/json","X-Office-Key":key},body:body?JSON.stringify(body):undefined});
+ const requestHeaders=new Headers();
+ requestHeaders.set("Content-Type","application/json");
+ requestHeaders.set("X-Office-Key",String(key||""));
+ const options={method,headers:requestHeaders};
+ if(body!==undefined&&body!==null) options.body=JSON.stringify(body);
+ const res=await fetch(API+path,options);
  const data=await res.json().catch(()=>({error:"Invalid server response"}));
  if(!res.ok) throw new Error(data.error||("HTTP "+res.status));
  return data;
