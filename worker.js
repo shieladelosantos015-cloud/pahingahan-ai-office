@@ -252,7 +252,7 @@ async function handleOfficeApi(request, env) {
   }
 
   const url = new URL(request.url);
-  const path = url.pathname.replace(/\\/+$/, "");
+  const path = url.pathname.replace(/\/+$/, "");
   try {
     if (request.method === "GET" && path === "/api/office") {
       const [tasks, leads, logs, memories] = await Promise.all([
