@@ -421,7 +421,7 @@ async function handleOfficeApi(request, env) {
 
         await env.DB.prepare("INSERT INTO agent_memory (agent_name, memory) VALUES (?, ?)").bind(
           "Customer Relations",
-          "Output for task #" + taskId + " — " + taskResult.title + "\\n" + output.slice(0, 3900)
+          "Output for task #" + taskId + " — " + taskResult.title + "\n" + output.slice(0, 3900)
         ).run();
         await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)").bind(
           "Customer Relations",
