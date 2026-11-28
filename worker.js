@@ -372,7 +372,61 @@ async function sendMessengerImage(recipientId, imageUrl, env) {
   }
 }
 
+async async function getMessengerLanguage(env, senderId) {
+  if (!env.DB) return "filipino";
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS messenger_preferences (sender_id TEXT PRIMARY KEY, language TEXT NOT NULL DEFAULT 'filipino', updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").run();
+  const row = await env.DB.prepare("SELECT language FROM messenger_preferences WHERE sender_id = ?").bind(senderId).first();
+  return row && row.language === "english" ? "english" : "filipino";
+}
+
+function requestsEnglish(message) {
+  const text = String(message || "").toLowerCase();
+  return /\b(i (?:do not|don't|cannot|can't) understand (?:tagalog|filipino)|i (?:do not|don't) speak (?:tagalog|filipino)|english please|please (?:speak|reply|answer) in english|can you (?:speak|reply) english|speak english|reply in english|answer in english)\b/.test(text)
+    || /(?:hindi ko maintindihan|di ko maintindihan|hindi ako makaintindi|di ako makaintindi).*(?:tagalog|filipino)/.test(text)
+    || /(?:english|ingles).*(?:na lang|please|po|paki)/.test(text);
+}
+
+async function translateMessengerReplyToEnglish(message, env) {
+  if (!env.AI || typeof env.AI.run !== "function") {
+    return "Thank you for your message. We can assist you in English. Our rate is PHP 1,400 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the following day. Please let us know your preferred date so we can check availability.";
+  }
+  try {
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+      messages: [
+        { role:"system", content:"Translate the supplied Pahingahan Stay Cation customer-service reply into natural, polite English. Preserve every date, price, condition, and meaning exactly. Do not add facts, examples, offers, or details. Output only the translated reply." },
+        { role:"user", content:String(message || "").slice(0, 1800) }
+      ],
+      max_tokens:500,
+      temperature:0.1
+    });
+    const translated = typeof result === "string" ? result : (result && (result.response || result.generated_text || result.text || result.output));
+    if (typeof translated === "string" && translated.trim()) return translated.trim().slice(0, 2000);
+  } catch (error) {
+    console.error("Messenger English translation failed:", error && error.message);
+  }
+  return "Thank you for your message. We can assist you in English. Please tell us your preferred date or question, and we will be happy to help. 😊";
+}
+
 async function buildMessengerReply(message, env, senderId) {
+  let language = "filipino";
+  try {
+    if (requestsEnglish(message)) {
+      if (env.DB) {
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS messenger_preferences (sender_id TEXT PRIMARY KEY, language TEXT NOT NULL DEFAULT 'filipino', updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").run();
+        await env.DB.prepare("INSERT INTO messenger_preferences (sender_id, language, updated_at) VALUES (?, 'english', CURRENT_TIMESTAMP) ON CONFLICT(sender_id) DO UPDATE SET language = 'english', updated_at = CURRENT_TIMESTAMP").bind(senderId).run();
+      }
+      language = "english";
+    } else {
+      language = await getMessengerLanguage(env, senderId);
+    }
+  } catch (error) {
+    console.error("Messenger language preference error:", error && error.message);
+  }
+  const reply = await buildMessengerReplyCore(message, env, senderId);
+  return language === "english" ? await translateMessengerReplyToEnglish(reply, env) : reply;
+}
+
+function buildMessengerReplyCore(message, env, senderId) {
   const lowerMessage = String(message || '').toLowerCase();
   if (asksMonthlyAvailability(message)) {
     try {
