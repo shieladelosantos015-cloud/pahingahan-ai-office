@@ -27,6 +27,10 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith("/api/office")) {
+      return handleOfficeApi(request, env);
+    }
+
     if (request.method === "GET") {
       const mode = url.searchParams.get("hub.mode");
       const token = url.searchParams.get("hub.verify_token");
@@ -226,4 +230,97 @@ async function sendMessengerReply(recipientId, message, env) {
     throw new Error("Messenger Send API failed: " + response.status);
   }
   console.log("Messenger reply sent successfully.");
+}
+
+
+/* Pahingahan AI Office D1 API.
+   Protect all API routes with the OFFICE_ADMIN_TOKEN Worker secret. */
+async function handleOfficeApi(request, env) {
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Office-Key",
+  };
+  const json = (data, status = 200) => new Response(JSON.stringify(data), {
+    status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" }
+  });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (!env.DB) return json({ error: "D1 binding DB is not configured." }, 503);
+  if (!env.OFFICE_ADMIN_TOKEN) return json({ error: "OFFICE_ADMIN_TOKEN secret is not configured." }, 503);
+  if (request.headers.get("X-Office-Key") !== env.OFFICE_ADMIN_TOKEN) {
+    return json({ error: "Unauthorized. Check your Office access key." }, 401);
+  }
+
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\\/+$/, "");
+  try {
+    if (request.method === "GET" && path === "/api/office") {
+      const [tasks, leads, logs, memories] = await Promise.all([
+        env.DB.prepare("SELECT * FROM tasks ORDER BY id DESC LIMIT 100").all(),
+        env.DB.prepare("SELECT * FROM leads ORDER BY id DESC LIMIT 100").all(),
+        env.DB.prepare("SELECT * FROM activity_logs ORDER BY id DESC LIMIT 100").all(),
+        env.DB.prepare("SELECT * FROM agent_memory ORDER BY id DESC LIMIT 100").all(),
+      ]);
+      return json({ ok: true, tasks: tasks.results || [], leads: leads.results || [],
+        logs: logs.results || [], memories: memories.results || [] });
+    }
+
+    if (request.method === "POST" && path === "/api/office/tasks") {
+      const body = await request.json();
+      if (!body.title || !String(body.title).trim()) return json({ error: "Task title is required." }, 400);
+      const title = String(body.title).trim().slice(0, 200);
+      const description = String(body.description || "").slice(0, 3000);
+      const agent = String(body.assigned_agent || "General Manager").slice(0, 80);
+      const priority = ["low", "normal", "high"].includes(body.priority) ? body.priority : "normal";
+      const result = await env.DB.prepare(
+        "INSERT INTO tasks (title, description, assigned_agent, status, priority) VALUES (?, ?, ?, 'pending', ?)"
+      ).bind(title, description, agent, priority).run();
+      await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)")
+        .bind("General Manager", "Task created", title + " → " + agent).run();
+      return json({ ok: true, id: result.meta && result.meta.last_row_id, status: "pending" }, 201);
+    }
+
+    if (request.method === "PATCH" && path.startsWith("/api/office/tasks/")) {
+      const id = Number(path.split("/").pop());
+      const body = await request.json();
+      const status = String(body.status || "");
+      if (!Number.isInteger(id) || id < 1 || !["pending", "in_progress", "completed", "blocked"].includes(status)) {
+        return json({ error: "Invalid task id or status." }, 400);
+      }
+      await env.DB.prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(status, id).run();
+      await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)")
+        .bind(String(body.agent_name || "General Manager"), "Task status changed", "Task #" + id + " → " + status).run();
+      return json({ ok: true, id, status });
+    }
+
+    if (request.method === "POST" && path === "/api/office/leads") {
+      const body = await request.json();
+      const result = await env.DB.prepare(
+        "INSERT INTO leads (client_name, source, post_url, inquiry, suggested_reply, status) VALUES (?, ?, ?, ?, ?, 'new')"
+      ).bind(
+        String(body.client_name || "").slice(0, 160),
+        String(body.source || "").slice(0, 300),
+        String(body.post_url || "").slice(0, 1000),
+        String(body.inquiry || "").slice(0, 3000),
+        String(body.suggested_reply || "").slice(0, 2000)
+      ).run();
+      await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)")
+        .bind("Client Hunting", "Lead saved", String(body.client_name || "Unnamed lead").slice(0, 160)).run();
+      return json({ ok: true, id: result.meta && result.meta.last_row_id }, 201);
+    }
+
+    if (request.method === "POST" && path === "/api/office/memory") {
+      const body = await request.json();
+      if (!body.agent_name || !body.memory) return json({ error: "agent_name and memory are required." }, 400);
+      await env.DB.prepare("INSERT INTO agent_memory (agent_name, memory) VALUES (?, ?)")
+        .bind(String(body.agent_name).slice(0, 80), String(body.memory).slice(0, 4000)).run();
+      return json({ ok: true });
+    }
+
+    return json({ error: "Office API route not found." }, 404);
+  } catch (error) {
+    console.error("Office API error:", error && error.message);
+    return json({ error: "Office API request failed." }, 500);
+  }
 }
