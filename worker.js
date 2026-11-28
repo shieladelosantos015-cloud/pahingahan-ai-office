@@ -247,7 +247,7 @@ async function handleOfficeApi(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (!env.DB) return json({ error: "D1 binding DB is not configured." }, 503);
   if (!env.OFFICE_ADMIN_TOKEN) return json({ error: "OFFICE_ADMIN_TOKEN secret is not configured." }, 503);
-  if (request.headers.get("X-Office-Key") !== env.OFFICE_ADMIN_TOKEN) {
+  const encodedOfficeKey = request.headers.get("X-Office-Key") || "";\n  let suppliedOfficeKey = "";\n  try { suppliedOfficeKey = new TextDecoder().decode(Uint8Array.from(atob(encodedOfficeKey), c => c.charCodeAt(0))); } catch { suppliedOfficeKey = ""; }\n  if (suppliedOfficeKey !== env.OFFICE_ADMIN_TOKEN) {
     return json({ error: "Unauthorized. Check your Office access key." }, 401);
   }
 
