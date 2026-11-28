@@ -271,26 +271,54 @@ async function handleOfficeApi(request, env) {
       const body = await request.json();
       const instruction = String(body.instruction || "").trim().slice(0, 2000);
       if (!instruction) return json({ error: "Instruction is required." }, 400);
-
-      const text = instruction.toLowerCase();
-      let agent = "General Manager";
-      let reason = "General operations instruction; manager review required.";
-
-      if (/(booking|book|reserve|reservation|availability|available|calendar|schedule|slot|date|guest|check.?in|check.?out)/i.test(text)) {
-        agent = "Booking & Scheduling";
-        reason = "Booking, date, guest, or availability work detected.";
-      } else if (/(customer|client|guest|inquir|messenger|reply|message|faq|complaint|question)/i.test(text)) {
-        agent = "Customer Relations";
-        reason = "Customer communication work detected.";
-      } else if (/(find clients|hunt|prospect|lead|potential client|facebook group|search clients)/i.test(text)) {
-        agent = "Client Hunting";
-        reason = "Lead research or prospecting work detected.";
-      } else if (/(design|creative|poster|promo|promotion|caption|social media|image|edit|video|reel|advert)/i.test(text)) {
-        agent = "Creative & Editing";
-        reason = "Marketing or creative production work detected.";
+      if (!env.AI || typeof env.AI.run !== "function") {
+        return json({ error: "Workers AI binding AI is not configured on this Worker." }, 503);
       }
 
-      const title = ("Manager delegation: " + instruction).slice(0, 200);
+      const allowedAgents = [
+        "Customer Relations",
+        "Client Hunting",
+        "Creative & Editing",
+        "Booking & Scheduling",
+        "General Manager"
+      ];
+      let agent = "General Manager";
+      let reason = "AI could not confidently classify the task; manager review is required.";
+      let title = ("Manager delegation: " + instruction).slice(0, 200);
+
+      try {
+        const aiResult = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+          messages: [
+            {
+              role: "system",
+              content: "You are Michael, the General Manager of Pahingahan Stay Cation. Analyze the owner's instruction and delegate it to exactly one department. Allowed departments: Customer Relations, Client Hunting, Creative & Editing, Booking & Scheduling, General Manager. Never claim work is completed. Do not invent business facts, availability, amenities, prices, or customer details. Return ONLY valid JSON with keys: assigned_agent, task_title, reason. Keep task_title under 160 characters and reason under 300 characters."
+            },
+            {
+              role: "user",
+              content: "Owner instruction: " + instruction
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.2
+        });
+
+        const raw = String(aiResult && (aiResult.response || aiResult.result || "")).trim();
+        const cleaned = raw.replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
+        const parsed = JSON.parse(cleaned);
+        if (!allowedAgents.includes(parsed.assigned_agent)) {
+          throw new Error("AI returned an unknown department.");
+        }
+        agent = parsed.assigned_agent;
+        reason = String(parsed.reason || reason).slice(0, 300);
+        title = String(parsed.task_title || title).slice(0, 200);
+      } catch (error) {
+        console.error("Manager AI delegation failed:", error && error.message);
+        return json({
+          error: "Michael could not analyze this instruction with Workers AI. No task was created.",
+          details: String(error && error.message || "AI request failed").slice(0, 300)
+        }, 502);
+      }
+
       const result = await env.DB.prepare(
         "INSERT INTO tasks (title, description, assigned_agent, status, priority) VALUES (?, ?, ?, 'pending', 'normal')"
       ).bind(title, instruction, agent).run();
@@ -298,9 +326,9 @@ async function handleOfficeApi(request, env) {
       const id = result.meta && result.meta.last_row_id;
       await env.DB.prepare(
         "INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)"
-      ).bind("General Manager", "Task delegated", "Task #" + id + " -> " + agent + ": " + reason).run();
+      ).bind("General Manager", "AI task delegated", "Task #" + id + " -> " + agent + ": " + reason).run();
 
-      return json({ ok: true, id, assigned_agent: agent, reason, status: "pending" }, 201);
+      return json({ ok: true, id, assigned_agent: agent, reason, status: "pending", model: "@cf/meta/llama-3.1-8b-instruct" }, 201);
     }
 
     if (request.method === "POST" && path === "/api/office/tasks") {
