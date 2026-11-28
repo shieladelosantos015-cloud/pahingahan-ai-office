@@ -228,6 +228,42 @@ async function handleOfficeApi(request, env) {
       });
     }
 
+    if (request.method === "POST" && path === "/api/office/manager/delegate") {
+      const body = await request.json();
+      const instruction = String(body.instruction || "").trim().slice(0, 2000);
+      if (!instruction) return json({ error: "Instruction is required." }, 400);
+
+      const text = instruction.toLowerCase();
+      let agent = "General Manager";
+      let reason = "General operations instruction; manager review required.";
+
+      if (/(booking|book|reserve|reservation|availability|available|calendar|schedule|slot|date|guest|check.?in|check.?out)/i.test(text)) {
+        agent = "Booking & Scheduling";
+        reason = "Booking, date, guest, or availability work detected.";
+      } else if (/(customer|client|guest|inquir|messenger|reply|message|faq|complaint|question)/i.test(text)) {
+        agent = "Customer Relations";
+        reason = "Customer communication work detected.";
+      } else if (/(find clients|hunt|prospect|lead|potential client|facebook group|search clients)/i.test(text)) {
+        agent = "Client Hunting";
+        reason = "Lead research or prospecting work detected.";
+      } else if (/(design|creative|poster|promo|promotion|caption|social media|image|edit|video|reel|advert)/i.test(text)) {
+        agent = "Creative & Editing";
+        reason = "Marketing or creative production work detected.";
+      }
+
+      const title = ("Manager delegation: " + instruction).slice(0, 200);
+      const result = await env.DB.prepare(
+        "INSERT INTO tasks (title, description, assigned_agent, status, priority) VALUES (?, ?, ?, 'pending', 'normal')"
+      ).bind(title, instruction, agent).run();
+
+      const id = result.meta && result.meta.last_row_id;
+      await env.DB.prepare(
+        "INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)"
+      ).bind("General Manager", "Task delegated", "Task #" + id + " -> " + agent + ": " + reason).run();
+
+      return json({ ok: true, id, assigned_agent: agent, reason, status: "pending" }, 201);
+    }
+
     if (request.method === "POST" && path === "/api/office/tasks") {
       const body = await request.json();
       if (!body.title || !String(body.title).trim()) {
