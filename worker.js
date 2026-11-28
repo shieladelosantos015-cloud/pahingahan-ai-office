@@ -198,8 +198,7 @@ function parseBookingDetails(message) {
     if (count >= 1 && count <= 50) guests = count;
 
     if (!name) {
-      const beforeGuestCount = text.slice(0, guestMatch.index).replace(/[;,\s:-]+$/, '').trim();
-      const candidate = beforeGuestCount.replace(/^(?:pangalan|name)\s*[:=-]\s*/i, '').trim();
+      const candidate = text.slice(0, guestMatch.index).replace(/[;,\s:-]+$/, '').trim();
       if (/[a-z]/i.test(candidate)) name = candidate.replace(/[.!?]+$/, '').slice(0, 100);
     }
   }
@@ -248,7 +247,7 @@ async function buildMessengerReply(message, env, senderId) {
     }
     if (result.available === true) {
       await env.DB.prepare("INSERT INTO booking_inquiries (sender_id, requested_date, status) VALUES (?, ?, 'awaiting_details')").bind(senderId, date).run();
-      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Halimbawa: Pangalan: Maria Santos; Guests: 4. Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede ring full payment na ₱1,400. Hindi pa po reserved ang slot hangga't hindi verified ang payment.";
+      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede ring full payment na ₱1,400. Hindi pa po reserved ang slot hangga't hindi verified ang payment.";
     }
     return "Pasensya na po, hindi na available ang " + date + ". 😊 May iba pa po ba kayong preferred date para ma-check ko rin?";
   } catch (error) {
