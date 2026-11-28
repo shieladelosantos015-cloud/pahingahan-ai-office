@@ -66,12 +66,42 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 .taskRow{border:1px solid #4d634b;border-radius:9px;padding:10px;background:#0b170f;margin:7px 0;font-size:12px}
 .taskRow small{color:#b7c4ad}.taskRow button{margin:4px 4px 0 0}
 @media(max-width:600px){#taskModal{padding:7px}#taskPanel{margin:3px auto;padding:12px}}
+
+/* Team chat and visual polish */
+#main{background:radial-gradient(ellipse at 50% 35%,#294533 0%,#17251d 62%,#0b130e 100%)}
+header{box-shadow:0 5px 22px #0007}
+button{transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}
+button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 7px 16px #0007}
+.card{background:linear-gradient(145deg,#102017f5,#09130ff2);border-color:#8a9a72}
+.agent{transition:background .2s ease;border-radius:8px}.agent:hover{background:#314a35}
+.avatar{box-shadow:0 0 0 2px #f2dfb244,0 3px 10px #0008}
+#teamChatModal{display:none;position:fixed;inset:0;z-index:32;background:#050b08eF;backdrop-filter:blur(8px);padding:14px;overflow:auto}
+#teamChatPanel{max-width:680px;margin:10px auto;border:1px solid #8b9b70;border-radius:18px;overflow:hidden;background:linear-gradient(155deg,#172b20,#0b160f);box-shadow:0 24px 80px #000c}
+#teamChatHead{padding:15px 17px;background:linear-gradient(110deg,#263f2c,#101c14);border-bottom:1px solid #657956;display:flex;align-items:center;justify-content:space-between;gap:8px}
+#teamChatHead h2{margin:3px 0 0;font-size:19px;color:#f4ead4}
+#chatStatus{font-size:9px;color:#9fe0a8;letter-spacing:.12em}
+#chatMessages{height:min(56vh,480px);min-height:260px;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:11px}
+.chatMsg{display:flex;gap:9px;align-items:flex-start;max-width:92%;animation:chatIn .28s ease-out}
+.chatMsg.right{align-self:flex-end;flex-direction:row-reverse}
+.chatAvatar{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:none;color:#152017;font-weight:950;box-shadow:0 3px 9px #0007}
+.chatBubble{border:1px solid #526b4e;background:#1a3022;border-radius:4px 13px 13px 13px;padding:9px 11px;font-size:12px;line-height:1.5;color:#f2ead8;box-shadow:0 5px 12px #0004}
+.chatMsg.right .chatBubble{background:#293a2a;border-radius:13px 4px 13px 13px}
+.chatName{display:block;font-size:9px;color:#edc879;font-weight:900;letter-spacing:.05em;margin-bottom:3px}
+.chatTime{font-size:8px;color:#aebca5;margin-top:4px;text-align:right}
+#chatTyping{padding:0 15px 12px;color:#b9c9b0;font-size:10px;min-height:24px}
+.typingDots span{display:inline-block;width:5px;height:5px;background:#e7bf70;border-radius:50%;margin:0 2px;animation:dotPulse .9s infinite alternate}
+.typingDots span:nth-child(2){animation-delay:.2s}.typingDots span:nth-child(3){animation-delay:.4s}
+@keyframes chatIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dotPulse{to{opacity:.25;transform:translateY(-3px)}}
+#chatDisclaimer{padding:10px 14px;border-top:1px solid #42563e;background:#0b170f;color:#b9c9b0;font-size:9px;line-height:1.5}
+@media(max-width:600px){#teamChatModal{padding:6px}#teamChatPanel{margin:2px auto}#chatMessages{height:55vh;padding:10px}.chatMsg{max-width:98%}.chatBubble{font-size:11px}}
+
 </style>
 </head>
 <body><div id="app">
 <header><div class="brand">🏡 PAHINGAHAN AI OFFICE<small>VIRTUAL HEADQUARTERS · OWNER CONTROL</small></div><div id="headerRight"><span class="liveDot"></span><span>OFFICE SIMULATION ONLINE</span></div></header>
 <main id="main"><canvas id="view"></canvas>
-<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button><button id="taskDesk">TASK DESK</button><button id="managerDesk" class="gold">MANAGER</button></div>
+<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button><button id="taskDesk">TASK DESK</button><button id="managerDesk" class="gold">MANAGER</button><button id="openTeamChat">TEAM CHAT</button></div>
 <section id="brandCard"><div class="eyebrow">PAHINGAHAN · HQ</div><div class="big">Operations Floor</div><div class="sub">Four AI departments · Owner-controlled booking approval · 3D virtual workspace</div></section>
 <aside id="side">
  <section class="card"><h3>✦ TEAM STATUS</h3>
@@ -85,7 +115,12 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 <div id="departments"><button data-room="Reception">RECEPTION</button><button data-room="Guest Relations">GUEST RELATIONS</button><button data-room="Booking">BOOKING</button><button data-room="Manager">MANAGER</button><button data-room="Pantry">PANTRY</button><button data-room="Lounge">LOUNGE</button></div>
 <div id="joystick"><div id="stick"></div></div><div id="hint">Tap an agent or department • Drag to look around in Walk Mode</div>
 <div id="info"><h2 id="infoTitle">Office</h2><p id="infoText"></p><button class="gold" id="infoClose">CLOSE</button></div>
-<div id="taskModal"><section id="taskPanel">
+<div id="teamChatModal"><section id="teamChatPanel">
+<div id="teamChatHead"><div><div class="eyebrow">PAHINGAHAN · TEAM COMMUNICATION</div><h2>Office Team Chat</h2><div id="chatStatus">● TEAM CHANNEL ONLINE</div></div><button id="closeTeamChat">CLOSE ✕</button></div>
+<div id="chatMessages" aria-live="polite"><div class="chatMsg"><span class="chatAvatar" style="background:#80a7d7">M</span><div class="chatBubble"><span class="chatName">MICHAEL · GENERAL MANAGER</span>Good day, team. Let's review today's operations.</div></div></div>
+<div id="chatTyping"></div>
+<div id="chatDisclaimer">Conversation preview: these are scripted sample exchanges for the office experience. They are not yet autonomous AI-to-AI conversations and do not represent completed work.</div>
+</section></div><div id="taskModal"><section id="taskPanel">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · OPERATIONS</div><h2>Cloud Task Desk</h2></div><button id="taskClose">CLOSE ✕</button></div>
 <p style="color:#c5d2c0;font-size:11px;line-height:1.5">Tasks saved here are stored in your Cloudflare D1 database and can be accessed from another device. This is task management, not autonomous AI execution yet.</p>
 <label class="taskLabel">OFFICE ACCESS KEY (your OFFICE_ADMIN_TOKEN secret value)</label>
@@ -392,4 +427,39 @@ list.addEventListener("click",async e=>{
  catch(err){showStatus("Could not update task: "+err.message)}
 });
 })();
-</script></body></html>
+
+<script>
+(()=>{
+ const modal=document.getElementById("teamChatModal"),feed=document.getElementById("chatMessages"),typing=document.getElementById("chatTyping");
+ if(!modal||!feed)return;
+ const team=[
+  {name:"Michael · General Manager",initial:"M",color:"#80a7d7",text:"Good day, team. Let's review today's operations."},
+  {name:"Emma · Customer Relations",initial:"E",color:"#d99abb",text:"I can prepare polite replies for rate and booking inquiries. Our published rate is ₱1,950 for 22 hours."},
+  {name:"Jake · Booking & Scheduling",initial:"J",color:"#79c5d2",text:"Noted. I'll organize date and guest details, but the owner must verify the live availability."},
+  {name:"Ryan · Owner Handoff",initial:"R",color:"#d6ad68",text:"I'll keep payment and final booking confirmation with the owner. We should never promise an unverified slot."},
+  {name:"Michael · General Manager",initial:"M",color:"#80a7d7",text:"Good coordination. Emma handles guest questions, Jake prepares booking details, and Ryan flags owner handoffs."},
+  {name:"Emma · Customer Relations",initial:"E",color:"#d99abb",text:"Understood. I'll keep replies friendly and avoid inventing amenities or house rules we haven't confirmed."},
+  {name:"Jake · Booking & Scheduling",initial:"J",color:"#79c5d2",text:"I'll make sure every booking request is sent for owner review before it is confirmed."}
+ ];
+ let index=0,timer=null;
+ function addMessage(m){
+  const el=document.createElement("div");el.className="chatMsg"+(index%4===0?" right":"");
+  const avatar=document.createElement("span");avatar.className="chatAvatar";avatar.style.background=m.color;avatar.textContent=m.initial;
+  const bubble=document.createElement("div");bubble.className="chatBubble";
+  const name=document.createElement("span");name.className="chatName";name.textContent=m.name;
+  const body=document.createElement("div");body.textContent=m.text;
+  const time=document.createElement("div");time.className="chatTime";time.textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  bubble.append(name,body,time);el.append(avatar,bubble);feed.append(el);feed.scrollTop=feed.scrollHeight;
+  while(feed.children.length>35)feed.removeChild(feed.firstChild);
+ }
+ function next(){
+  typing.innerHTML='Team is typing <span class="typingDots"><span></span><span></span><span></span></span>';
+  timer=setTimeout(()=>{typing.textContent="";addMessage(team[index%team.length]);index++;timer=setTimeout(next,5200)},1200);
+ }
+ function open(){modal.style.display="block";if(!timer)next()}
+ function close(){modal.style.display="none";if(timer){clearTimeout(timer);timer=null}}
+ document.getElementById("openTeamChat").onclick=open;
+ document.getElementById("closeTeamChat").onclick=close;
+ modal.addEventListener("click",e=>{if(e.target===modal)close()});
+})();
+</script></script></body></html>
