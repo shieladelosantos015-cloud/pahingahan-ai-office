@@ -217,7 +217,107 @@ async function saveBookingInquiryDetails(env, inquiry, details) {
   return { name, guests, status };
 }
 
+function requestedCalendarMonth(message) {
+  const text = String(message || '').toLowerCase();
+  const months = { january:1, jan:1, february:2, feb:2, march:3, mar:3, april:4, apr:4, may:5, june:6, jun:6, july:7, jul:7, august:8, aug:8, september:9, sept:9, sep:9, october:10, oct:10, november:11, nov:11, december:12, dec:12 };
+  const match = text.match(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(20\d{2})\b/i);
+  if (match) return { year: Number(match[2]), month: months[match[1]] };
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Manila', year:'numeric', month:'numeric' }).formatToParts(now);
+  return { year:Number(parts.find(p => p.type === 'year').value), month:Number(parts.find(p => p.type === 'month').value) };
+}
+
+async function buildCalendarImageUrl(env, monthInfo) {
+  const year = monthInfo.year;
+  const month = monthInfo.month;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const available = [];
+  const unavailable = [];
+  const errors = [];
+  const today = manilaToday();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = makeDateString(year, month, day);
+    const x = (firstWeekday + day - 1) % 7;
+    const y = Math.floor((firstWeekday + day - 1) / 7);
+    if (date < today) continue;
+    try {
+      const result = await callGoogleCalendar(env, { action:'availability', date });
+      if (!result || result.success !== true || typeof result.available !== 'boolean') {
+        errors.push(date);
+        continue;
+      }
+      const point = { x, y, day, v:1 };
+      (result.available ? available : unavailable).push(point);
+    } catch (error) {
+      console.error('Calendar image date check failed:', date, error && error.message);
+      errors.push(date);
+    }
+  }
+
+  if (errors.length) throw new Error('Could not verify all dates in the requested month.');
+  const monthName = new Intl.DateTimeFormat('en-US', { month:'long', timeZone:'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)));
+  const config = {
+    type:'matrix',
+    data:{
+      datasets:[
+        { label:'Available', data:available, backgroundColor:'#28a745', borderColor:'#ffffff', borderWidth:3, width:42, height:42 },
+        { label:'Booked', data:unavailable, backgroundColor:'#dc3545', borderColor:'#ffffff', borderWidth:3, width:42, height:42 }
+      ]
+    },
+    options:{
+      responsive:false,
+      plugins:{
+        title:{ display:true, text:'PAHINGAHAN STAY CATION — '+monthName.toUpperCase()+' '+year, font:{size:24,weight:'bold'}, color:'#20252b', padding:18 },
+        legend:{ display:true, position:'bottom', labels:{font:{size:16}, usePointStyle:true, padding:20} },
+        datalabels:{ display:true, color:'#ffffff', font:{size:16,weight:'bold'}, formatter:(ctx)=>ctx.raw.day }
+      },
+      scales:{
+        x:{ type:'linear', min:-0.5, max:6.5, ticks:{ stepSize:1, callback:(v)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][v], font:{size:14,weight:'bold'} }, grid:{display:false}, offset:true },
+        y:{ type:'linear', min:-0.5, max:5.5, reverse:true, ticks:{display:false,stepSize:1}, grid:{display:false}, offset:true }
+      }
+    }
+  };
+  return 'https://quickchart.io/chart?width=900&height=720&format=png&backgroundColor=white&c=' + encodeURIComponent(JSON.stringify(config));
+}
+
+async function sendMessengerImage(recipientId, imageUrl, env) {
+  if (!env.PAGE_ACCESS_TOKEN) throw new Error('Missing PAGE_ACCESS_TOKEN secret');
+  const response = await fetch(
+    'https://graph.facebook.com/' + GRAPH_API_VERSION + '/me/messages?access_token=' + encodeURIComponent(env.PAGE_ACCESS_TOKEN),
+    {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        recipient:{ id:recipientId },
+        messaging_type:'RESPONSE',
+        message:{ attachment:{ type:'image', payload:{ url:imageUrl, is_reusable:true } } }
+      })
+    }
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error('Messenger image API error:', response.status, JSON.stringify(result));
+    throw new Error('Messenger image send failed: ' + response.status);
+  }
+}
+
 async function buildMessengerReply(message, env, senderId) {
+  const lowerMessage = String(message || '').toLowerCase();
+  const asksCalendarImage = hasAny(lowerMessage, ['picture of calendar','photo of calendar','calendar picture','calendar photo','send calendar','show calendar','calendar image','picture ng calendar','photo ng calendar','screenshot ng calendar','calendar po','calendar']);
+  if (asksCalendarImage) {
+    try {
+      const monthInfo = requestedCalendarMonth(message);
+      const imageUrl = await buildCalendarImageUrl(env, monthInfo);
+      await sendMessengerImage(senderId, imageUrl, env);
+      const monthLabel = new Intl.DateTimeFormat('en-US', { month:'long', timeZone:'UTC' }).format(new Date(Date.UTC(monthInfo.year, monthInfo.month - 1, 1)));
+      return 'Ito po ang calendar availability natin for ' + monthLabel + ' ' + monthInfo.year + '. 🗓️ Green = available; red = fully booked. Live calendar po ang chineck ko bago ginawa ang image. Paki-message lang po ang exact date na gusto ninyo para ma-check ko ulit bago mag-proceed sa booking. 😊';
+    } catch (error) {
+      console.error('Calendar image generation failed:', error && error.message);
+      return 'Pasensya na po, hindi ko ma-generate ang calendar image ngayon dahil hindi ko ma-verify ang lahat ng dates. Maaari po bang subukan ulit mamaya, o sabihin ang exact date para ma-check ko? 😊';
+    }
+  }
   if (!env.DB) return 'Pasensya na po, may temporary issue sa booking system. Owner/admin po muna ang mag-a-assist sa inyo. 😊';
   const activeInquiry = await getActiveBookingInquiry(env, senderId);
   if (activeInquiry && activeInquiry.status === 'awaiting_details') {
