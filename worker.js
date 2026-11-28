@@ -185,13 +185,25 @@ function parseBookingDetails(message) {
   let guests = null;
   let match = text.match(/(?:pangalan|name)\s*[:=-]\s*([^;\n,]+)/i);
   if (match) name = match[1].trim().slice(0, 100);
+
   if (!name) {
     match = text.match(/(?:ako po si|ako si|this is|i am|i'm)\s+([a-z][a-z .'-]{1,80})/i);
     if (match) name = match[1].trim().replace(/[.!?]+$/, '').slice(0, 100);
   }
-  match = text.match(/(?:guests?|pax|katao|persons?|people|kami)\s*[:=-]?\s*(\d{1,2})/i);
-  if (!match) match = text.match(/(\d{1,2})\s*(?:guests?|pax|katao|persons?|people|kami|adults?)/i);
-  if (match) { const count = Number(match[1]); if (count >= 1 && count <= 50) guests = count; }
+
+  const guestMatch = text.match(/(?:guests?|pax|katao|persons?|people|kami)\s*[:=-]?\s*\d{1,2}|\d{1,2}\s*(?:guests?|pax|katao|persons?|people|kami|adults?)/i);
+  if (guestMatch) {
+    const countMatch = guestMatch[0].match(/\d{1,2}/);
+    const count = countMatch ? Number(countMatch[0]) : 0;
+    if (count >= 1 && count <= 50) guests = count;
+
+    if (!name) {
+      const beforeGuestCount = text.slice(0, guestMatch.index).replace(/[;,\s:-]+$/, '').trim();
+      const candidate = beforeGuestCount.replace(/^(?:pangalan|name)\s*[:=-]\s*/i, '').trim();
+      if (/[a-z]/i.test(candidate)) name = candidate.replace(/[.!?]+$/, '').slice(0, 100);
+    }
+  }
+
   return { name, guests };
 }
 
@@ -213,7 +225,7 @@ async function buildMessengerReply(message, env, senderId) {
     const saved = await saveBookingInquiryDetails(env, activeInquiry, parseBookingDetails(message));
     if (saved.status === 'awaiting_owner_payment') return 'Salamat po, ' + saved.name + '! 😊 Na-note ko na ang request ninyo para sa ' + activeInquiry.requested_date + ' para sa ' + saved.guests + ' guest(s). Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 reservation downpayment para ma-secure ang slot; puwede rin pong full payment na ₱1,400. Ang remaining balance after downpayment ay ₱700, hindi pa kasama ang additional person kung meron. Alin po ang preferred ninyo? Kapag ready na po kayo, owner mismo ang magbibigay ng payment details. Hindi pa reserved ang slot hangga\'t hindi verified ang payment.';
     const missing = []; if (!saved.name) missing.push('pangalan'); if (!saved.guests) missing.push('bilang ng guests');
-    return 'Salamat po! Para maipasa ko nang tama ang request, pakisagot po ang ' + missing.join(' at ') + '. Halimbawa: Pangalan: Maria Santos; Guests: 4 😊';
+    return 'Salamat po! Pakibigay na lang po ang ' + missing.join(' at ') + ' para maipasa ko ang booking request ninyo. 😊';
   }
   if (activeInquiry && activeInquiry.status === 'awaiting_owner_payment') {
     if (hasAny(message.toLowerCase(), ['payment', 'downpayment', 'down payment', 'bayad', 'gcash', 'bank', 'deposit', 'full', '700', '1400', 'ready', 'sige', 'go'])) return HANDOFF;
