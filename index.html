@@ -386,7 +386,7 @@ async function api(path,method="GET",body){
  if(body!==undefined&&body!==null) options.body=JSON.stringify(body);
  const res=await fetch(API+path,options);
  const data=await res.json().catch(()=>({error:"Invalid server response"}));
- if(!res.ok) throw new Error(data.error||("HTTP "+res.status));
+ if(!res.ok) throw new Error((data.error||("HTTP "+res.status))+(data.details?" | Details: "+data.details:""));
  return data;
 }
 function showStatus(msg,good=false){status.textContent=msg;status.style.borderLeftColor=good?"#69c58b":"#e7bf70"}
