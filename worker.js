@@ -423,6 +423,18 @@ async function handleOfficeApi(request, env) {
       return json(result, 201);
     }
 
+    if (request.method === "POST" && /^\/api\/office\/bookings\/\d+\/confirm-payment$/.test(path)) {
+      const inquiryId = Number(path.split("/")[4]);
+      await ensureBookingInquiriesTable(env);
+      const inquiry = await env.DB.prepare("SELECT * FROM booking_inquiries WHERE id = ?").bind(inquiryId).first();
+      if (!inquiry) return json({ error: "Booking inquiry not found." }, 404);
+      if (inquiry.status !== "awaiting_owner_payment") return json({ error: "This inquiry is not ready for owner payment confirmation." }, 409);
+      const result = await callGoogleCalendar(env, { action: "create_booking", date: inquiry.requested_date, client_name: inquiry.client_name, guests: String(inquiry.guests), owner_confirmed_payment: true });
+      if (!result.success) return json({ error: result.error || "Calendar booking failed." }, 409);
+      await env.DB.prepare("UPDATE booking_inquiries SET status = 'booked', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(inquiryId).run();
+      await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)").bind("Booking & Scheduling", "Owner confirmed payment and booking", "Inquiry #" + inquiryId + " — " + inquiry.client_name + ", " + inquiry.guests + " guest(s), " + inquiry.requested_date).run();
+      return json({ ok: true, inquiry_id: inquiryId, status: "booked", calendar: result }, 201);
+    }
     if (request.method === "GET" && path === "/api/office") {
       await ensureBookingInquiriesTable(env);
       const results = await Promise.all([
