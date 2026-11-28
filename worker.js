@@ -124,7 +124,7 @@ async function processWebhookEvents(body, env) {
 
         const incoming = event.message && event.message.text;
         const reply = incoming && incoming.trim()
-          ? await buildMessengerReply(incoming.trim(), env)
+          ? await buildMessengerReply(incoming.trim(), env, senderId)
           : "Salamat po sa pag-message! Maaari po bang i-type ang inyong tanong para matulungan namin kayo?";
 
         await sendMessengerReply(senderId, reply, env);
@@ -170,7 +170,55 @@ function manilaToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
-async function buildMessengerReply(message, env) {
+async function ensureBookingInquiriesTable(env) {
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS booking_inquiries (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id TEXT NOT NULL, requested_date TEXT NOT NULL, client_name TEXT, guests INTEGER, status TEXT NOT NULL DEFAULT 'awaiting_details', created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").run();
+}
+
+async function getActiveBookingInquiry(env, senderId) {
+  await ensureBookingInquiriesTable(env);
+  return await env.DB.prepare("SELECT * FROM booking_inquiries WHERE sender_id = ? AND status IN ('awaiting_details','awaiting_owner_payment') ORDER BY id DESC LIMIT 1").bind(senderId).first();
+}
+
+function parseBookingDetails(message) {
+  const text = String(message || '').trim();
+  let name = null;
+  let guests = null;
+  let match = text.match(/(?:pangalan|name)\s*[:=-]\s*([^;\n,]+)/i);
+  if (match) name = match[1].trim().slice(0, 100);
+  if (!name) {
+    match = text.match(/(?:ako po si|ako si|this is|i am|i'm)\s+([a-z][a-z .'-]{1,80})/i);
+    if (match) name = match[1].trim().replace(/[.!?]+$/, '').slice(0, 100);
+  }
+  match = text.match(/(?:guests?|pax|katao|persons?|people|kami)\s*[:=-]?\s*(\d{1,2})/i);
+  if (!match) match = text.match(/(\d{1,2})\s*(?:guests?|pax|katao|persons?|people|kami|adults?)/i);
+  if (match) { const count = Number(match[1]); if (count >= 1 && count <= 50) guests = count; }
+  return { name, guests };
+}
+
+async function saveBookingInquiryDetails(env, inquiry, details) {
+  const name = details.name || inquiry.client_name || null;
+  const guests = details.guests || inquiry.guests || null;
+  const status = name && guests ? 'awaiting_owner_payment' : 'awaiting_details';
+  await env.DB.prepare('UPDATE booking_inquiries SET client_name = ?, guests = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(name, guests, status, inquiry.id).run();
+  if (status === 'awaiting_owner_payment') {
+    await env.DB.prepare('INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)').bind('Booking & Scheduling', 'Booking inquiry ready for owner', 'Inquiry #' + inquiry.id + ' — ' + name + ', ' + guests + ' guest(s), ' + inquiry.requested_date).run();
+  }
+  return { name, guests, status };
+}
+
+async function buildMessengerReply(message, env, senderId) {
+  if (!env.DB) return 'Pasensya na po, may temporary issue sa booking system. Owner/admin po muna ang mag-a-assist sa inyo. 😊';
+  const activeInquiry = await getActiveBookingInquiry(env, senderId);
+  if (activeInquiry && activeInquiry.status === 'awaiting_details') {
+    const saved = await saveBookingInquiryDetails(env, activeInquiry, parseBookingDetails(message));
+    if (saved.status === 'awaiting_owner_payment') return 'Salamat po, ' + saved.name + '! 😊 Na-record ko na ang request ninyo para sa ' + activeInquiry.requested_date + ' para sa ' + saved.guests + ' guest(s). Ipapasa ko po ito sa owner para sa payment/downpayment instructions. Hindi pa po confirmed ang booking hangga\'t hindi kinukumpirma ng owner ang payment.';
+    const missing = []; if (!saved.name) missing.push('pangalan'); if (!saved.guests) missing.push('bilang ng guests');
+    return 'Salamat po! Para maipasa ko nang tama ang request, pakisagot po ang ' + missing.join(' at ') + '. Halimbawa: Pangalan: Maria Santos; Guests: 4 😊';
+  }
+  if (activeInquiry && activeInquiry.status === 'awaiting_owner_payment') {
+    if (hasAny(message.toLowerCase(), ['payment', 'downpayment', 'down payment', 'bayad', 'gcash', 'bank', 'deposit'])) return HANDOFF;
+    return 'Nakuha na po ng owner ang booking request ninyo para sa ' + activeInquiry.requested_date + '. Para po sa payment/downpayment, please wait lang po muna sandali. Ako po ang magbibigay sa inyo ng payment details kung saan ninyo puwedeng i-send ang downpayment. Thank you po! 😊';
+  }
   const s = message.toLowerCase();
   const asksAvailability = hasAny(s, ["available", "availability", "bakante", "may slot", "open pa", "vacant", "free pa", "gusto mag book", "want to book", "mag book", "mag-book", "pa-book", "pabook", "booking"]);
   if (!asksAvailability) return buildFaqReply(message);
@@ -187,7 +235,8 @@ async function buildMessengerReply(message, env) {
       return "Pasensya na po, hindi ko ma-verify ang availability ngayon. Ipa-check ko po muna sa owner/admin bago tayo mag-confirm. 😊";
     }
     if (result.available === true) {
-      return "Available po ang " + date + "! 😊 Maaari na po kayong mag-proceed sa booking. Pakibigay lang po ang inyong pangalan at bilang ng guests. Ang slot ay hindi pa reserved hangga't hindi nakukumpirma ng owner ang payment at booking.";
+      await env.DB.prepare("INSERT INTO booking_inquiries (sender_id, requested_date, status) VALUES (?, ?, 'awaiting_details')").bind(senderId, date).run();
+      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Halimbawa: Pangalan: Maria Santos; Guests: 4. Hindi pa po reserved ang slot hangga't hindi kinukumpirma ng owner ang payment at booking.";
     }
     return "Pasensya na po, hindi na available ang " + date + ". 😊 May iba pa po ba kayong preferred date para ma-check ko rin?";
   } catch (error) {
@@ -375,18 +424,21 @@ async function handleOfficeApi(request, env) {
     }
 
     if (request.method === "GET" && path === "/api/office") {
+      await ensureBookingInquiriesTable(env);
       const results = await Promise.all([
         env.DB.prepare("SELECT * FROM tasks ORDER BY id DESC LIMIT 100").all(),
         env.DB.prepare("SELECT * FROM leads ORDER BY id DESC LIMIT 100").all(),
         env.DB.prepare("SELECT * FROM activity_logs ORDER BY id DESC LIMIT 100").all(),
-        env.DB.prepare("SELECT * FROM agent_memory ORDER BY id DESC LIMIT 100").all()
+        env.DB.prepare("SELECT * FROM agent_memory ORDER BY id DESC LIMIT 100").all(),
+        env.DB.prepare("SELECT * FROM booking_inquiries ORDER BY id DESC LIMIT 100").all()
       ]);
       return json({
         ok: true,
         tasks: results[0].results || [],
         leads: results[1].results || [],
         logs: results[2].results || [],
-        memories: results[3].results || []
+        memories: results[3].results || [],
+        booking_inquiries: results[4].results || []
       });
     }
 
