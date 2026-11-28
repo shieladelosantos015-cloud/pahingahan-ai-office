@@ -302,9 +302,35 @@ async function handleOfficeApi(request, env) {
           temperature: 0.2
         });
 
-        const raw = String(aiResult && (aiResult.response || aiResult.result || "")).trim();
-        const cleaned = raw.replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
-        const parsed = JSON.parse(cleaned);
+        function extractDelegation(value, depth = 0) {
+          if (depth > 5 || value == null) return null;
+          if (typeof value === "string") {
+            const cleaned = value.trim().replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
+            const first = cleaned.indexOf("{");
+            const last = cleaned.lastIndexOf("}");
+            if (first < 0 || last <= first) return null;
+            try { return extractDelegation(JSON.parse(cleaned.slice(first, last + 1)), depth + 1); }
+            catch { return null; }
+          }
+          if (typeof value === "object") {
+            if (value.assigned_agent) return value;
+            for (const key of ["response", "result", "output", "content", "text", "generated_text"]) {
+              if (value[key] !== undefined) {
+                const found = extractDelegation(value[key], depth + 1);
+                if (found) return found;
+              }
+            }
+            for (const nested of Object.values(value)) {
+              const found = extractDelegation(nested, depth + 1);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+        const parsed = extractDelegation(aiResult);
+        if (!parsed) {
+          throw new Error("Workers AI response did not contain a valid JSON delegation object. Response shape: " + JSON.stringify(aiResult).slice(0, 350));
+        }
         if (!allowedAgents.includes(parsed.assigned_agent)) {
           throw new Error("AI returned an unknown department.");
         }
