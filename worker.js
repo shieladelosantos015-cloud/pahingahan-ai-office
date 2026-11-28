@@ -137,9 +137,9 @@ async function processWebhookEvents(body, env) {
 
 function extractRequestedDate(message) {
   const text = String(message || "").toLowerCase();
-  let match = text.match(/\\b(20\\d{2})-(\\d{1,2})-(\\d{1,2})\\b/);
+  let match = text.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
   if (match) return makeDateString(Number(match[1]), Number(match[2]), Number(match[3]));
-  match = text.match(/\\b(\\d{1,2})[\\/.-](\\d{1,2})[\\/.-](20\\d{2})\\b/);
+  match = text.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/);
   if (match) return makeDateString(Number(match[3]), Number(match[2]), Number(match[1]));
 
   const months = {
@@ -147,7 +147,7 @@ function extractRequestedDate(message) {
     may:5, june:6, jun:6, july:7, jul:7, august:8, aug:8, september:9,
     sep:9, sept:9, october:10, oct:10, november:11, nov:11, december:12, dec:12
   };
-  match = text.match(/\\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(20\\d{2}))?\\b/);
+  match = text.match(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/);
   if (match) {
     const now = new Date();
     let year = match[3] ? Number(match[3]) : now.getFullYear();
