@@ -350,18 +350,18 @@ function makeReply(text,date,guests){
  const ask=missing.length?"May I know your "+missing.join(" and ")+" po?":"";
  const noted=[d.date,d.guests].filter(Boolean).join(" · ");
  if(c.type==="booking"){
-  return {assessment:"Booking intent detected."+(noted?" Details extracted: "+noted+".":" No complete date/guest details found.")+" Owner/admin must check availability and give final confirmation.",reply:"Hello po! 😊 Thank you for choosing Pahingahan Stay Cation. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Our rate is ₱1,950 for 22 hours (2:00 PM check-in to 12:00 noon checkout the next day). Additional person is ₱200 each. Iche-check po ng owner/admin ang availability at siya ang magbibigay ng final booking confirmation."};
+  return {assessment:"Booking intent detected."+(noted?" Details extracted: "+noted+".":" No complete date/guest details found.")+" Owner/admin must check availability and give final confirmation.",reply:"Hello po! 😊 Thank you for choosing Pahingahan Stay Cation. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Our rate is ₱1,400 for 22 hours (2:00 PM check-in to 12:00 noon checkout the next day). Additional person is ₱150 each. Iche-check po ng owner/admin ang availability at siya ang magbibigay ng final booking confirmation."};
  }
  if(c.type==="availability"){
-  return {assessment:"Availability inquiry detected."+(noted?" Details extracted: "+noted+".":"")+" Huwag mangako ng slot; owner/admin lang ang makakapag-check ng live availability.",reply:"Hello po! 😊 Thank you for your interest sa Pahingahan Stay Cation. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Our rate is ₱1,950 for 22 hours, with 2:00 PM check-in and 12:00 noon checkout the next day. Additional person is ₱200 each. Iche-check po ng owner/admin ang actual availability bago mag-confirm."};
+  return {assessment:"Availability inquiry detected."+(noted?" Details extracted: "+noted+".":"")+" Huwag mangako ng slot; owner/admin lang ang makakapag-check ng live availability.",reply:"Hello po! 😊 Thank you for your interest sa Pahingahan Stay Cation. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Our rate is ₱1,400 for 22 hours, with 2:00 PM check-in and 12:00 noon checkout the next day. Additional person is ₱150 each. Iche-check po ng owner/admin ang actual availability bago mag-confirm."};
  }
  if(c.type==="price"){
-  return {assessment:"Price inquiry detected."+(noted?" Details extracted: "+noted+".":"")+" Reply with the published rate.",reply:"Hello po! 😊 Our rate at Pahingahan Stay Cation is ₱1,950 for 22 hours. Check-in is 2:00 PM and check-out is 12:00 noon the next day. Additional person is ₱200 each. "+(noted?"Noted po: "+noted+". ":"")+ask};
+  return {assessment:"Price inquiry detected."+(noted?" Details extracted: "+noted+".":"")+" Reply with the published rate.",reply:"Hello po! 😊 Our rate at Pahingahan Stay Cation is ₱1,400 for 22 hours. Check-in is 2:00 PM and check-out is 12:00 noon the next day. Additional person is ₱150 each. "+(noted?"Noted po: "+noted+". ":"")+ask};
  }
  if(c.type==="discovery"){
-  return {assessment:"Potential staycation lead detected"+(noted?". Details extracted: "+noted+".":". Verify the post context before contacting."),reply:"Hello po! 😊 Baka interested po kayo sa Pahingahan Stay Cation. Our rate is ₱1,950 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the next day. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Additional person is ₱200 each. 😊"};
+  return {assessment:"Potential staycation lead detected"+(noted?". Details extracted: "+noted+".":". Verify the post context before contacting."),reply:"Hello po! 😊 Baka interested po kayo sa Pahingahan Stay Cation. Our rate is ₱1,400 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the next day. "+(noted?"Noted po: "+noted+". ":"")+ask+(ask?" ":"")+"Additional person is ₱150 each. 😊"};
  }
- return {assessment:"Low match: hindi malinaw na naghahanap ng staycation, presyo, availability, o booking. I-review muna kung relevant bago mag-reply.",reply:"Hello po! 😊 If naghahanap po kayo ng staycation, message lang po kami para ma-assist namin kayo. Our rate is ₱1,950 for 22 hours. 😊"};
+ return {assessment:"Low match: hindi malinaw na naghahanap ng staycation, presyo, availability, o booking. I-review muna kung relevant bago mag-reply.",reply:"Hello po! 😊 If naghahanap po kayo ng staycation, message lang po kami para ma-assist namin kayo. Our rate is ₱1,400 for 22 hours. 😊"};
 }
 function getData(){return {name:$("leadName").value.trim(),url:$("leadUrl").value.trim(),text:$("leadText").value.trim(),date:$("leadDate").value.trim(),guests:$("leadGuests").value.trim(),group:groups[+$("leadGroup").value].name}}
 $("makeDraft").onclick=()=>{const d=getData();if(!d.text){$("leadAssessment").style.display="block";$("leadAssessment").textContent="Ilagay muna ang post o inquiry text.";return}const r=makeReply(d.text,d.date,d.guests);currentDraft=r.reply;$("leadAssessment").style.display="block";$("leadAssessment").textContent=r.assessment;$("draftBox").textContent=currentDraft};
@@ -478,7 +478,7 @@ list.addEventListener("click",async e=>{
  if(!modal||!feed)return;
  const team=[
   {name:"Michael · General Manager",initial:"M",color:"#80a7d7",text:"Good day, team. Let's review today's operations."},
-  {name:"Emma · Customer Relations",initial:"E",color:"#d99abb",text:"I can prepare polite replies for rate and booking inquiries. Our published rate is ₱1,950 for 22 hours."},
+  {name:"Emma · Customer Relations",initial:"E",color:"#d99abb",text:"I can prepare polite replies for rate and booking inquiries. Our published rate is ₱1,400 for 22 hours."},
   {name:"Jake · Booking & Scheduling",initial:"J",color:"#79c5d2",text:"Noted. I'll organize date and guest details, but the owner must verify the live availability."},
   {name:"Ryan · Owner Handoff",initial:"R",color:"#d6ad68",text:"I'll keep payment and final booking confirmation with the owner. We should never promise an unverified slot."},
   {name:"Michael · General Manager",initial:"M",color:"#80a7d7",text:"Good coordination. Emma handles guest questions, Jake prepares booking details, and Ryan flags owner handoffs."},
