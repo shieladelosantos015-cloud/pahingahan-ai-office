@@ -124,7 +124,7 @@ async function processWebhookEvents(body, env) {
 
         const incoming = event.message && event.message.text;
         const reply = incoming && incoming.trim()
-          ? buildFaqReply(incoming.trim())
+          ? await buildMessengerReply(incoming.trim(), env)
           : "Salamat po sa pag-message! Maaari po bang i-type ang inyong tanong para matulungan namin kayo?";
 
         await sendMessengerReply(senderId, reply, env);
@@ -132,6 +132,67 @@ async function processWebhookEvents(body, env) {
         console.error("Messenger event error:", error && error.message);
       }
     }
+  }
+}
+
+function extractRequestedDate(message) {
+  const text = String(message || "").toLowerCase();
+  let match = text.match(/\\b(20\\d{2})-(\\d{1,2})-(\\d{1,2})\\b/);
+  if (match) return makeDateString(Number(match[1]), Number(match[2]), Number(match[3]));
+  match = text.match(/\\b(\\d{1,2})[\\/.-](\\d{1,2})[\\/.-](20\\d{2})\\b/);
+  if (match) return makeDateString(Number(match[3]), Number(match[2]), Number(match[1]));
+
+  const months = {
+    january:1, jan:1, february:2, feb:2, march:3, mar:3, april:4, apr:4,
+    may:5, june:6, jun:6, july:7, jul:7, august:8, aug:8, september:9,
+    sep:9, sept:9, october:10, oct:10, november:11, nov:11, december:12, dec:12
+  };
+  match = text.match(/\\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(20\\d{2}))?\\b/);
+  if (match) {
+    const now = new Date();
+    let year = match[3] ? Number(match[3]) : now.getFullYear();
+    const month = months[match[1]];
+    const day = Number(match[2]);
+    let result = makeDateString(year, month, day);
+    if (!match[3] && result && result < manilaToday()) result = makeDateString(year + 1, month, day);
+    return result;
+  }
+  return null;
+}
+
+function makeDateString(year, month, day) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return String(year).padStart(4, "0") + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+function manilaToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+async function buildMessengerReply(message, env) {
+  const s = message.toLowerCase();
+  const asksAvailability = hasAny(s, ["available", "availability", "bakante", "may slot", "open pa", "vacant", "free pa", "gusto mag book", "want to book", "mag book", "mag-book", "pa-book", "pabook", "booking"]);
+  if (!asksAvailability) return buildFaqReply(message);
+
+  const date = extractRequestedDate(message);
+  if (!date) {
+    return "Sure po! 😊 Anong exact date po ang gusto ninyong i-book? Halimbawa: December 1, 2026. Iche-check ko po ang calendar natin.";
+  }
+
+  try {
+    const result = await callGoogleCalendar(env, { action: "availability", date });
+    if (!result || result.success !== true) {
+      console.error("Calendar availability response:", JSON.stringify(result || {}));
+      return "Pasensya na po, hindi ko ma-verify ang availability ngayon. Ipa-check ko po muna sa owner/admin bago tayo mag-confirm. 😊";
+    }
+    if (result.available === true) {
+      return "Available po ang " + date + "! 😊 Maaari na po kayong mag-proceed sa booking. Pakibigay lang po ang inyong pangalan at bilang ng guests. Ang slot ay hindi pa reserved hangga't hindi nakukumpirma ng owner ang payment at booking.";
+    }
+    return "Pasensya na po, hindi na available ang " + date + ". 😊 May iba pa po ba kayong preferred date para ma-check ko rin?";
+  } catch (error) {
+    console.error("Messenger calendar availability failed:", error && error.message);
+    return "Pasensya na po, hindi ko ma-check ang calendar sa ngayon. Owner/admin po muna ang magve-verify ng availability. 😊";
   }
 }
 
