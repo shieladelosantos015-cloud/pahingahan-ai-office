@@ -247,7 +247,7 @@ async function buildMessengerReply(message, env, senderId) {
     }
     if (result.available === true) {
       await env.DB.prepare("INSERT INTO booking_inquiries (sender_id, requested_date, status) VALUES (?, ?, 'awaiting_details')").bind(senderId, date).run();
-      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede ring full payment na ₱1,400. Hindi pa po reserved ang slot hangga't hindi verified ang payment.";
+      return "Upon checking our calendar, available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede ring full payment na ₱1,400. Hindi pa po reserved ang slot hangga't hindi verified ang payment.";
     }
     return "Pasensya na po, hindi na available ang " + date + ". 😊 May iba pa po ba kayong preferred date para ma-check ko rin?";
   } catch (error) {
