@@ -127,6 +127,12 @@ button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 7px
 <input id="officeKey" class="taskInput" type="password" autocomplete="off" placeholder="Paste your private access key">
 <div class="huntActions"><button id="saveOfficeKey" class="gold">CONNECT</button><button id="forgetOfficeKey">CLEAR KEY</button><button id="refreshTasks">REFRESH TASKS</button></div>
 <div id="taskConnection" class="huntNotice">Not connected. Enter your private key to connect.</div>
+<h3 style="color:var(--gold)">◷ GOOGLE CALENDAR · AVAILABILITY TEST</h3>
+<p style="color:#c5d2c0;font-size:11px">Pumili ng check-in date para tingnan kung may existing booking sa Pahingahan Bookings calendar. Availability check lang ito; walang event na gagawin.</p>
+<label class="taskLabel" for="calendarCheckDate">CHECK-IN DATE</label>
+<input id="calendarCheckDate" class="taskInput" type="date">
+<div class="huntActions"><button id="checkCalendarDate" class="gold">CHECK GOOGLE CALENDAR</button></div>
+<div id="calendarCheckResult" class="huntNotice">Waiting for date check.</div>
 <h3 style="color:var(--gold)">✦ GENERAL MANAGER · DELEGATE WORK</h3>
 <p style="color:#c5d2c0;font-size:11px">Ilagay ang instruction. Gagamit si Michael ng Workers AI para suriin ang instruction, pumili ng department, at gumawa ng cloud task.</p>
 <label class="taskLabel">OWNER INSTRUCTION</label><textarea id="managerInstruction" class="taskInput" rows="3" maxlength="2000" placeholder="e.g. Gumawa ng promotional post para sa weekend staycation"></textarea>
@@ -418,6 +424,17 @@ $("taskClose").onclick=()=>{$("taskModal").style.display="none"};
 $("saveOfficeKey").onclick=async()=>{connectedKey=keyInput.value.trim();if(!connectedKey){showStatus("Please enter your private access key.");return}sessionStorage.setItem(keyName,connectedKey);await refresh()};
 $("forgetOfficeKey").onclick=()=>{connectedKey="";keyInput.value="";sessionStorage.removeItem(keyName);list.innerHTML="";showStatus("Key cleared from this browser session.")};
 $("refreshTasks").onclick=refresh;
+$("checkCalendarDate").onclick=async()=>{
+ const date=$("calendarCheckDate").value;
+ const result=$("calendarCheckResult");
+ if(!date){result.textContent="Pumili muna ng check-in date.";return}
+ result.textContent="Checking Google Calendar...";
+ try{
+  const data=await api("/api/office/calendar/availability","POST",{date});
+  if(data.available===true) result.textContent="AVAILABLE · Walang existing calendar event na conflict sa 2:00 PM check-in para sa "+date+". Owner verification is still required.";
+  else result.textContent="NOT AVAILABLE · May existing calendar event sa date na "+date+". "+(data.events||[]).map(e=>e.title+" ("+e.start+" to "+e.end+")").join(" | ");
+ }catch(e){result.textContent="Calendar check failed: "+e.message}
+};
 $("createTask").onclick=async()=>{
  const title=$("newTaskTitle").value.trim();if(!title){showStatus("Enter a task title first.");return}
  try{await api("/api/office/tasks","POST",{title,description:$("newTaskDescription").value,assigned_agent:$("newTaskAgent").value,priority:$("newTaskPriority").value});$("newTaskTitle").value="";$("newTaskDescription").value="";await refresh()}
