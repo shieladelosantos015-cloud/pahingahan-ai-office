@@ -239,16 +239,37 @@ function renderLeads(){
  $("leadList").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{const l=leads[+b.dataset.copy];navigator.clipboard?.writeText(l.reply||"");});
  $("leadList").querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{leads.splice(+b.dataset.remove,1);persist()});
 }
-function classify(t){const x=t.toLowerCase();const intent=/looking for|hanap|recommend|suggest|staycation|stay cation|overnight|room|accommodation|pahinga|vacation|booking|available|avail|need a place|saan.*stay/.test(x);const urgency=/today|tonight|tomorrow|bukas|mamaya|this weekend|weekend|december|november|january|february|march|april|may|june|july|august|september|october/.test(x);return {intent,urgency,score:(intent?2:0)+(urgency?1:0)}}
+function classify(t){
+ const x=t.toLowerCase();
+ const price=/how much|hm\\b|magkano|price|rate|presyo|budget|affordable|cheap| mura/.test(x);
+ const availability=/available|availability|avail|vacant|open slot|may slot|may room|may bakante|may available/.test(x);
+ const booking=/book|booking|reserve|reservation|pa-reserve|magpareserve|mag-book|kuha.*room|get.*room/.test(x);
+ const intent=/looking for|hanap|recommend|suggest|staycation|stay cation|overnight|room|accommodation|pahinga|vacation|need a place|saan.*stay|where to stay/.test(x);
+ const urgency=/today|tonight|tomorrow|bukas|mamaya|this weekend|weekend|december|november|january|february|march|april|may|june|july|august|september|october/.test(x);
+ let type="general";
+ if(booking)type="booking";
+ else if(availability)type="availability";
+ else if(price)type="price";
+ else if(intent)type="discovery";
+ return {type,intent:intent||price||availability||booking,urgency,score:((intent||price||availability||booking)?2:0)+(urgency?1:0)};
+}
 function makeReply(text,date,guests){
  const c=classify(text);
- if(!c.intent)return {assessment:"Low match: hindi malinaw na naghahanap ng staycation/accommodation. I-review muna kung relevant.",reply:"Hello po! 😊 If naghahanap po kayo ng staycation, message lang po kami para ma-assist namin kayo."};
- let r="Hello po! 😊 Baka interested po kayo sa Pahingahan Stay Cation. Our rate is ₱1,950 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the next day.";
- if(date)r+=" For your preferred date ("+date+"), owner/admin po ang magche-check ng actual availability.";
- else r+=" May preferred date po ba kayo?";
- if(guests)r+=" Ilan po kayong guests ("+guests+")?";else r+=" Ilan po kayong guests?";
- r+=" Additional person is ₱200 each. 😊";
- return {assessment:"Potential match: may staycation/accommodation intent"+(c.urgency?" at may date/time clue.":"." )+" Verify the post context before contacting.",reply:r};
+ const dateAsk=date||"preferred date";
+ const guestAsk=guests||"ilang guests";
+ if(c.type==="booking"){
+  return {assessment:"Booking intent detected: interested na magpa-book. Kailangan pa ring i-check ng owner/admin ang availability at magbigay ng final confirmation.",reply:"Hello po! 😊 Thank you for choosing Pahingahan Stay Cation. Our rate is ₱1,950 for 22 hours (2:00 PM check-in to 12:00 noon checkout the next day). May preferred date po ba kayo at ilan po kayong guests? Additional person is ₱200 each. Iche-check po ng owner/admin ang availability at siya ang magbibigay ng final booking confirmation."};
+ }
+ if(c.type==="availability"){
+  return {assessment:"Availability inquiry detected: huwag mangako ng slot. Owner/admin lang ang makakapag-check ng live availability.",reply:"Hello po! 😊 Thank you for your interest sa Pahingahan Stay Cation. May preferred date po ba kayo at ilan po kayong guests? Our rate is ₱1,950 for 22 hours, with 2:00 PM check-in and 12:00 noon checkout the next day. Additional person is ₱200 each. Iche-check po ng owner/admin ang actual availability bago mag-confirm."};
+ }
+ if(c.type==="price"){
+  return {assessment:"Price inquiry detected: reply with the published rate, then ask for date and guest count.",reply:"Hello po! 😊 Our rate at Pahingahan Stay Cation is ₱1,950 for 22 hours. Check-in is 2:00 PM and check-out is 12:00 noon the next day. Additional person is ₱200 each. May preferred date po ba kayo? Ilan po kayong guests?"};
+ }
+ if(c.type==="discovery"){
+  return {assessment:"Potential staycation lead detected"+(c.urgency?" with a date/time clue.":"; verify the post context before contacting.") ,reply:"Hello po! 😊 Baka interested po kayo sa Pahingahan Stay Cation. Our rate is ₱1,950 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the next day. May preferred date po ba kayo? Ilan po kayong guests? Additional person is ₱200 each. 😊"};
+ }
+ return {assessment:"Low match: hindi malinaw na naghahanap ng staycation, presyo, availability, o booking. I-review muna kung relevant bago mag-reply.",reply:"Hello po! 😊 If naghahanap po kayo ng staycation, message lang po kami para ma-assist namin kayo. Our rate is ₱1,950 for 22 hours. 😊"};
 }
 function getData(){return {name:$("leadName").value.trim(),url:$("leadUrl").value.trim(),text:$("leadText").value.trim(),date:$("leadDate").value.trim(),guests:$("leadGuests").value.trim(),group:groups[+$("leadGroup").value].name}}
 $("makeDraft").onclick=()=>{const d=getData();if(!d.text){$("leadAssessment").style.display="block";$("leadAssessment").textContent="Ilagay muna ang post o inquiry text.";return}const r=makeReply(d.text,d.date,d.guests);currentDraft=r.reply;$("leadAssessment").style.display="block";$("leadAssessment").textContent=r.assessment;$("draftBox").textContent=currentDraft};
