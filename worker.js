@@ -382,7 +382,7 @@ async function buildMessengerReply(message, env, senderId) {
       const monthLabel = new Intl.DateTimeFormat("en-US", { month:"long", timeZone:"UTC" }).format(new Date(Date.UTC(monthInfo.year, monthInfo.month - 1, 1)));
       if (result.available.length) {
         const dates = result.available.join(", ");
-        return "Upon checking our Google Calendar, may available dates pa po tayo ngayong " + monthLabel + " " + monthInfo.year + ": " + dates + ". 😊\n\nAng mga petsang ito ay available sa oras ng pag-check. Para ma-check ang specific date at maipagpatuloy ang booking, message lang po kayo ng napili ninyong date.";
+        return "Upon checking our Google Calendar, may available dates pa po tayo for " + monthLabel + " " + monthInfo.year + ": " + dates + ". 😊\n\nAng mga petsang ito ay available sa oras ng pag-check. Para ma-check ang specific date at maipagpatuloy ang booking, message lang po kayo ng napili ninyong date.";
       }
       return "Upon checking our Google Calendar, wala na po tayong available dates ngayong " + monthLabel + " " + monthInfo.year + ". Fully booked na po ang mga natitirang dates. 😊 Maaari po nating i-check ang ibang buwan.";
     } catch (error) {
