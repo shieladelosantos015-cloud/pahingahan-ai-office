@@ -369,6 +369,77 @@ async function handleOfficeApi(request, env) {
       return json({ ok: true, id, assigned_agent: agent, reason, status: "pending", model: "@cf/meta/llama-3.1-8b-instruct-fast" }, 201);
     }
 
+    if (request.method === "POST" && path === "/api/office/agents/customer-relations/execute") {
+      const body = await request.json();
+      const taskId = Number(body.task_id);
+      if (!Number.isInteger(taskId) || taskId < 1) return json({ error: "A valid task_id is required." }, 400);
+      if (!env.AI || typeof env.AI.run !== "function") return json({ error: "Workers AI binding AI is not configured." }, 503);
+
+      const taskResult = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(taskId).first();
+      if (!taskResult) return json({ error: "Task not found." }, 404);
+      if (taskResult.assigned_agent !== "Customer Relations") return json({ error: "This task is not assigned to Customer Relations." }, 409);
+      if (taskResult.status === "completed") return json({ error: "This task is already completed. Check Agent Work Output below." }, 409);
+
+      await env.DB.prepare("UPDATE tasks SET status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(taskId).run();
+
+      try {
+        const aiResult = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+          messages: [
+            {
+              role: "system",
+              content: "You are Emma, Customer Relations agent for Pahingahan Stay Cation in the Philippines. Create a practical customer response playbook in friendly, natural Taglish. VERIFIED FACTS ONLY: rate ₱1,950 for a 22-hour stay; check-in 2:00 PM; checkout 12:00 noon the next day; additional person ₱200 each. The owner handles payments and gives final booking confirmation. A requested slot may be held for 4 hours while payment is arranged, but do not imply it is held unless owner confirms. Do not invent included guest count, amenities, address, capacity, availability, house rules, payment account details, or policies. For unknown facts, clearly say ask owner/admin. Never claim a booking is confirmed or a date is available. Produce: (1) short task summary, (2) ready-to-use replies for greeting, price, booking/date/guest details, availability, check-in/out, extra guest, amenities/location, payment and final confirmation handoff, (3) safety notes for staff. Keep concise and usable. Output plain text, no JSON.";
+            },
+            {
+              role: "user",
+              content: "Complete this assigned task and produce the customer response playbook. Task title: " + taskResult.title + "\nTask instructions: " + String(taskResult.description || "Create improved customer response templates.").slice(0, 3000)
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.3
+        });
+
+        function extractText(value, depth = 0) {
+          if (depth > 6 || value == null) return "";
+          if (typeof value === "string") return value.trim();
+          if (typeof value === "object") {
+            for (const key of ["response", "generated_text", "text", "output", "content", "result"]) {
+              if (value[key] !== undefined) {
+                const found = extractText(value[key], depth + 1);
+                if (found) return found;
+              }
+            }
+            for (const nested of Object.values(value)) {
+              const found = extractText(nested, depth + 1);
+              if (found) return found;
+            }
+          }
+          return "";
+        }
+
+        const output = extractText(aiResult);
+        if (!output) throw new Error("Workers AI returned no readable text. Response shape: " + JSON.stringify(aiResult).slice(0, 300));
+
+        await env.DB.prepare("INSERT INTO agent_memory (agent_name, memory) VALUES (?, ?)").bind(
+          "Customer Relations",
+          "Output for task #" + taskId + " — " + taskResult.title + "\\n" + output.slice(0, 3900)
+        ).run();
+        await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)").bind(
+          "Customer Relations",
+          "Task executed",
+          "Completed task #" + taskId + " and saved customer response playbook to Agent Work Output."
+        ).run();
+        await env.DB.prepare("UPDATE tasks SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(taskId).run();
+
+        return json({ ok: true, task_id: taskId, status: "completed", output }, 200);
+      } catch (error) {
+        await env.DB.prepare("UPDATE tasks SET status = 'blocked', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(taskId).run();
+        await env.DB.prepare("INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)").bind(
+          "Customer Relations", "Task execution failed", "Task #" + taskId + ": " + String(error && error.message || error).slice(0, 300)
+        ).run();
+        return json({ error: "Customer Relations could not complete the task: " + String(error && error.message || error).slice(0, 400) }, 502);
+      }
+    }
+
     if (request.method === "POST" && path === "/api/office/tasks") {
       const body = await request.json();
       if (!body.title || !String(body.title).trim()) {
