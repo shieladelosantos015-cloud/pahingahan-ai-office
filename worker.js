@@ -287,7 +287,7 @@ async function handleOfficeApi(request, env) {
       let title = ("Manager delegation: " + instruction).slice(0, 200);
 
       try {
-        const aiResult = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast-fast", {
+        const aiResult = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
           messages: [
             {
               role: "system",
@@ -328,7 +328,7 @@ async function handleOfficeApi(request, env) {
         "INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)"
       ).bind("General Manager", "AI task delegated", "Task #" + id + " -> " + agent + ": " + reason).run();
 
-      return json({ ok: true, id, assigned_agent: agent, reason, status: "pending", model: "@cf/meta/llama-3.1-8b-instruct-fast-fast" }, 201);
+      return json({ ok: true, id, assigned_agent: agent, reason, status: "pending", model: "@cf/meta/llama-3.1-8b-instruct-fast" }, 201);
     }
 
     if (request.method === "POST" && path === "/api/office/tasks") {
