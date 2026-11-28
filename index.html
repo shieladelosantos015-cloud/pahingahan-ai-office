@@ -394,6 +394,8 @@ async function refresh(){
  try{
   const data=await api("/api/office");
   list.innerHTML=data.tasks.length?data.tasks.map(t=>'<div class="taskRow"><b>#'+t.id+' · '+escapeHtml(t.title)+'</b><br><small>'+escapeHtml(t.assigned_agent||"Unassigned")+' · '+escapeHtml(t.priority)+' · '+escapeHtml(t.status)+'</small>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+'<div class="huntActions">'+(t.assigned_agent==="Customer Relations"&&t.status!=="completed"?'<button data-run-agent="'+t.id+'" class="gold">RUN CUSTOMER RELATIONS</button>':'')+'<button data-task-status="'+t.id+'" data-status="in_progress">START</button><button data-task-status="'+t.id+'" data-status="completed">COMPLETE</button><button data-task-status="'+t.id+'" data-status="blocked">BLOCK</button></div></div>').join(""):'<p style="color:#b7c4ad">No cloud tasks yet.</p>';
+  const latestOutput=(data.memories||[]).find(m=>m.agent_name==="Customer Relations"&&String(m.memory||"").startsWith("Output for task #"));
+  if(latestOutput&&$("agentWorkOutput").textContent==="Completed AI-generated work will appear here.") $("agentWorkOutput").textContent=latestOutput.memory;
   showStatus("Connected to Cloudflare D1 · "+data.tasks.length+" task(s) loaded.",true);
  }catch(e){showStatus("Connection error: "+e.message);list.innerHTML=""}
 }
@@ -429,7 +431,7 @@ list.addEventListener("click",async e=>{
   output.textContent="Emma · Customer Relations is analyzing task #"+taskId+" and preparing the response playbook...";
   try{
    const result=await api("/api/office/agents/customer-relations/execute","POST",{task_id:taskId});
-   output.textContent="TASK #"+result.task_id+" · "+result.status.toUpperCase()+"\\n\\n"+result.output;
+   output.textContent="TASK #"+result.task_id+" · "+result.status.toUpperCase()+"\n\n"+result.output;
    await refresh();
   }catch(err){output.textContent="Agent execution failed: "+err.message;runButton.disabled=false;runButton.textContent="RETRY CUSTOMER RELATIONS"}
   return;
