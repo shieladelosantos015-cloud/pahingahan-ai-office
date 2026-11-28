@@ -123,82 +123,78 @@ async function processWebhookEvents(body, env) {
 }
 
 function buildFaqReply(message) {
-  const s = message.toLowerCase();
+  const s = message.toLowerCase().trim();
 
-  // Payment and confirmation must always be handled by the owner.
+  // Sensitive booking/payment steps always go to the owner.
   if (hasAny(s, [
     "payment", "magbabayad", "bayad na", "downpayment", "down payment",
     "gcash", "bank", "deposit", "mag deposit", "mag-deposit",
     "account number", "qr", "resibo", "receipt", "paid na",
     "pa-reserve", "pa reserve", "reserve na", "i-book na", "book na",
     "confirm booking", "booking confirmation", "pa-confirm", "pa confirm",
+  ])) return HANDOFF;
+
+  if (hasAny(s, [
+    "available", "availability", "bakante", "may slot", "open pa",
+    "vacant", "free pa", "may available", "may bakante",
   ])) {
-    return HANDOFF;
+    return "I-check po muna natin ang date ninyo. Wala pa akong direct access sa live calendar, kaya owner/admin po ang magko-confirm kung available. Anong date po ang balak ninyo?";
   }
 
-  const asksPrice = hasAny(s, [
+  if (hasAny(s, [
+    "amenities", "facilities", "pool", "swimming", "parking", "wifi",
+    "kitchen", "kwarto", "luto", "pet", "pets", "address", "location",
+    "saan kayo", "nasaan kayo", "house rules",
+  ])) {
+    return "Para tama po ang maibigay kong impormasyon, owner/admin po muna ang magko-confirm ng amenities, address, at house rules. 😊";
+  }
+
+  if (hasAny(s, [
     "magkano", "presyo", "price", "rate", "rates", "hm", "how much", "cost",
-  ]);
-  const asksCheckIn = hasAny(s, [
+  ])) {
+    return "₱1,950 po ang rate for 22 hours. Check-in po ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊";
+  }
+
+  if (hasAny(s, [
     "check in", "check-in", "checkin", "anong oras pasok", "oras ng pasok",
-  ]);
-  const asksCheckOut = hasAny(s, [
+  ])) {
+    return "Check-in po ay 2:00 PM. 😊";
+  }
+
+  if (hasAny(s, [
     "check out", "check-out", "checkout", "anong oras alis", "oras ng alis",
-  ]);
-  const asksDuration = hasAny(s, [
-    "ilang oras", "how many hours", "duration", "22 hours", "22hrs", "22 hrs",
-  ]);
-  const asksExtra = hasAny(s, [
+  ])) {
+    return "Check-out po ay 12:00 noon kinabukasan. 😊";
+  }
+
+  if (hasAny(s, [
+    "ilang oras", "how many hours", "how long", "duration", "gaano katagal",
+  ])) {
+    return "Up to 22 hours po ang stay natin. Check-in ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊";
+  }
+
+  if (hasAny(s, [
     "additional", "extra person", "extra guest", "dagdag na tao",
     "sobra", "excess", "per head", "per person",
-  ]);
-  const asksAvailability = hasAny(s, [
-    "available", "availability", "bakante", "may slot", "open pa",
-    "vacant", "free pa", "may available",
-  ]);
-  const asksBooking = hasAny(s, [
+  ])) {
+    return "₱200 po bawat additional person. 😊";
+  }
+
+  if (hasAny(s, [
     "booking", "book", "reservation", "mag reserve", "mag-reserve",
     "paano magbook", "paano mag-book",
-  ]);
-  const asksAmenities = hasAny(s, [
-    "amenities", "facilities", "pool", "swimming", "parking", "wifi",
-    "wifi", "kitchen", "room", "kwarto", "luto", "pet", "pets",
-    "address", "location", "saan kayo", "nasaan kayo",
-  ]);
-  const greeting = hasAny(s, [
+  ])) {
+    return "Sure po! 😊 I-send lang po ang preferred date at bilang ng guests. Iche-check ng owner/admin ang availability at siya rin ang magbibigay ng final booking confirmation.";
+  }
+
+  if (hasAny(s, [
     "hi", "hello", "good morning", "good afternoon", "good evening",
-    "magandang umaga", "magandang hapon", "magandang gabi", " 문의",
-  ]);
-
-  const answers = [];
-
-  if (asksPrice) answers.push(BUSINESS.rate);
-  if (asksCheckIn) answers.push(BUSINESS.checkIn);
-  if (asksCheckOut) answers.push(BUSINESS.checkOut);
-  if (asksDuration) answers.push(BUSINESS.duration);
-  if (asksExtra) answers.push(BUSINESS.extra);
-
-  if (asksAvailability) {
-    answers.push("Wala pa po akong access sa live availability calendar, kaya hindi ako makakapag-confirm kung bakante ang date. Paki-send po ang preferred date at i-check ito sa owner/admin ng Page.");
+    "magandang umaga", "magandang hapon", "magandang gabi",
+  ]) || s.length < 18) {
+    return "Hello po! Welcome sa Pahingahan Stay Cation. 😊 Ano pong maitutulong namin? Maaari po kayong magtanong tungkol sa rates, check-in/check-out, additional person, o booking.";
   }
 
-  if (asksBooking) {
-    answers.push("Para magpa-check ng booking, ihanda po ang preferred date at bilang ng guests. Owner/admin po ang magche-check ng availability at magbibigay ng final confirmation. Hindi pa po confirmed ang booking hangga't hindi ito kinukumpirma ng owner.");
-  }
-
-  if (asksAmenities) {
-    answers.push("Pasensya na po, wala pa sa aking verified information ang kumpletong listahan ng amenities, address, at house rules. Paki-message po ang owner/admin ng Page para sa eksaktong detalye.");
-  }
-
-  if (answers.length) {
-    return answers.join("\n\n");
-  }
-
-  if (greeting || s.length < 18) {
-    return "Hello po! Welcome sa Pahingahan Stay Cation. 😊 Maaari po kayong magtanong tungkol sa rates, 22-hour stay, check-in/check-out, additional person, at booking.";
-  }
-
-  return "Salamat po sa inyong inquiry! Ang alam kong details ay ₱1,950 para sa 22-hour stay, check-in 2:00 PM, check-out 12:00 noon kinabukasan, at ₱200 bawat additional person. Para sa amenities, exact availability, at iba pang detalye, paki-message po ang owner/admin ng Page para makumpirma nang tama.";
+  return "Salamat po sa pag-message sa Pahingahan Stay Cation! 😊 Para sa rate, ₱1,950 po for 22 hours; check-in ay 2:00 PM at check-out ay 12:00 noon kinabukasan. Kung ibang concern po ito, sabihin lang at tutulungan ko kayo sa impormasyong available sa akin.";
 }
 
 function hasAny(text, keywords) {
