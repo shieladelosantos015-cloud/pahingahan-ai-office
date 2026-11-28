@@ -4,6 +4,10 @@ const HANDOFF =
   "Para sa payment at final reservation confirmation, owner po mismo ang mag-aassist. Paki-message po ang owner/admin ng Page para ma-check at maasikaso ang inyong booking. Huwag pong magpadala ng payment hangga't hindi direktang kinukumpirma ng owner.";
 
 export default {
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(runManagerRoutine(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
@@ -43,6 +47,41 @@ export default {
     return new Response("EVENT_RECEIVED", { status: 200 });
   }
 };
+
+async function runManagerRoutine(env) {
+  if (!env.DB) {
+    console.error("Manager routine skipped: D1 binding DB is missing.");
+    return;
+  }
+
+  try {
+    const result = await env.DB.prepare(
+      "SELECT status, COUNT(*) AS total FROM tasks GROUP BY status"
+    ).all();
+
+    const counts = { pending: 0, in_progress: 0, completed: 0, blocked: 0 };
+    for (const row of result.results || []) {
+      if (Object.prototype.hasOwnProperty.call(counts, row.status)) {
+        counts[row.status] = Number(row.total) || 0;
+      }
+    }
+
+    const details =
+      "Scheduled operations check. Pending: " + counts.pending +
+      ", in progress: " + counts.in_progress +
+      ", completed: " + counts.completed +
+      ", blocked: " + counts.blocked +
+      ". This routine monitors task status only; it does not execute tasks.";
+
+    await env.DB.prepare(
+      "INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)"
+    ).bind("General Manager", "Automatic operations check", details).run();
+
+    console.log(details);
+  } catch (error) {
+    console.error("Manager routine failed:", error && error.message);
+  }
+}
 
 async function verifySignature(rawBody, signatureHeader, appSecret) {
   if (!signatureHeader || !appSecret) return false;
