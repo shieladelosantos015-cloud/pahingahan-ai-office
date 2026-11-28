@@ -58,12 +58,20 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 #draftBox{white-space:pre-wrap;background:#09140e;border:1px solid #687b60;border-radius:9px;padding:11px;font-size:12px;line-height:1.5;color:#f4ead4;min-height:50px}
 .huntNotice{border-left:3px solid #e7bf70;padding:8px 10px;background:#263426;color:#dce6d6;font-size:10px;margin:10px 0}
 @media(max-width:600px){#huntModal{padding:7px}#huntPanel{margin:3px auto;padding:12px}.huntGrid{grid-template-columns:1fr}.huntWide{grid-column:auto}}
+#taskModal{display:none;position:fixed;inset:0;z-index:31;background:#07100def;overflow:auto;padding:16px}
+#taskPanel{max-width:850px;margin:12px auto;background:#122019;border:1px solid #75876a;border-radius:16px;padding:16px;box-shadow:0 18px 60px #000b}
+#taskPanel h2{color:var(--gold);margin:0 0 8px;font-size:19px}
+.taskInput{width:100%;background:#09140e;color:#f4ead4;border:1px solid #66795e;border-radius:8px;padding:10px;font:12px system-ui;margin:5px 0 10px}
+.taskLabel{display:block;color:#d8e3d1;font-size:10px;font-weight:700}
+.taskRow{border:1px solid #4d634b;border-radius:9px;padding:10px;background:#0b170f;margin:7px 0;font-size:12px}
+.taskRow small{color:#b7c4ad}.taskRow button{margin:4px 4px 0 0}
+@media(max-width:600px){#taskModal{padding:7px}#taskPanel{margin:3px auto;padding:12px}}
 </style>
 </head>
 <body><div id="app">
 <header><div class="brand">🏡 PAHINGAHAN AI OFFICE<small>VIRTUAL HEADQUARTERS · OWNER CONTROL</small></div><div id="headerRight"><span class="liveDot"></span><span>OFFICE SIMULATION ONLINE</span></div></header>
 <main id="main"><canvas id="view"></canvas>
-<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button></div>
+<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button><button id="taskDesk">TASK DESK</button></div>
 <section id="brandCard"><div class="eyebrow">PAHINGAHAN · HQ</div><div class="big">Operations Floor</div><div class="sub">Four AI departments · Owner-controlled booking approval · 3D virtual workspace</div></section>
 <aside id="side">
  <section class="card"><h3>✦ TEAM STATUS</h3>
@@ -77,7 +85,21 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 <div id="departments"><button data-room="Reception">RECEPTION</button><button data-room="Guest Relations">GUEST RELATIONS</button><button data-room="Booking">BOOKING</button><button data-room="Manager">MANAGER</button><button data-room="Pantry">PANTRY</button><button data-room="Lounge">LOUNGE</button></div>
 <div id="joystick"><div id="stick"></div></div><div id="hint">Tap an agent or department • Drag to look around in Walk Mode</div>
 <div id="info"><h2 id="infoTitle">Office</h2><p id="infoText"></p><button class="gold" id="infoClose">CLOSE</button></div>
-<div id="huntModal"><section id="huntPanel">
+<div id="taskModal"><section id="taskPanel">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · OPERATIONS</div><h2>Cloud Task Desk</h2></div><button id="taskClose">CLOSE ✕</button></div>
+<p style="color:#c5d2c0;font-size:11px;line-height:1.5">Tasks saved here are stored in your Cloudflare D1 database and can be accessed from another device. This is task management, not autonomous AI execution yet.</p>
+<label class="taskLabel">OFFICE ACCESS KEY (your OFFICE_ADMIN_TOKEN secret value)</label>
+<input id="officeKey" class="taskInput" type="password" autocomplete="off" placeholder="Paste your private access key">
+<div class="huntActions"><button id="saveOfficeKey" class="gold">CONNECT</button><button id="forgetOfficeKey">CLEAR KEY</button><button id="refreshTasks">REFRESH TASKS</button></div>
+<div id="taskConnection" class="huntNotice">Not connected. Enter your private key to connect.</div>
+<h3 style="color:var(--gold)">＋ CREATE TASK</h3>
+<label class="taskLabel">TASK TITLE</label><input id="newTaskTitle" class="taskInput" maxlength="200" placeholder="e.g. Review today's booking inquiries">
+<label class="taskLabel">DESCRIPTION</label><textarea id="newTaskDescription" class="taskInput" rows="3" maxlength="3000" placeholder="Task details and expected result"></textarea>
+<label class="taskLabel">ASSIGN TO</label><select id="newTaskAgent" class="taskInput"><option>General Manager</option><option>Customer Relations</option><option>Client Hunting</option><option>Creative & Editing</option><option>Booking & Scheduling</option></select>
+<label class="taskLabel">PRIORITY</label><select id="newTaskPriority" class="taskInput"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>
+<div class="huntActions"><button id="createTask" class="gold">SAVE TASK TO CLOUD</button></div>
+<h3 style="color:var(--gold)">📋 CLOUD TASKS</h3><div id="cloudTaskList"></div>
+</section></div><div id="huntModal"><section id="huntPanel">
  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · CLIENT HUNTING</div><h2>Lead Finder & Reply Desk</h2></div><button id="huntClose">CLOSE ✕</button></div>
  <p>Assisted prospecting workspace. Ilagay ang public post details o inquiry na ikaw mismo ang may access. Gumagawa ito ng draft reply at lead record sa browser na ito.</p>
  <div class="huntNotice">Hindi nito awtomatikong sini-scan ang Facebook Groups o nagpapadala ng messages. Ang “Approve” ay internal approval lamang; ikaw ang magko-copy at magpapadala sa Facebook.</div>
@@ -305,5 +327,45 @@ function close(){ $("huntModal").style.display="none"}
 $("huntClose").onclick=close;$("huntCloseBottom").onclick=close;
 $("clientHunt").onclick=open;
 renderGroups();renderLeads();
+})();
+</script><script>
+(()=>{
+const API="https://pahingahanaioffice.shieladelosantos015.workers.dev";
+const $=id=>document.getElementById(id);
+const keyName="pahingahan_office_key_session";
+const keyInput=$("officeKey"), status=$("taskConnection"), list=$("cloudTaskList");
+let connectedKey=sessionStorage.getItem(keyName)||"";
+keyInput.value=connectedKey;
+async function api(path,method="GET",body){
+ const key=connectedKey||keyInput.value.trim();
+ const res=await fetch(API+path,{method,headers:{"Content-Type":"application/json","X-Office-Key":key},body:body?JSON.stringify(body):undefined});
+ const data=await res.json().catch(()=>({error:"Invalid server response"}));
+ if(!res.ok) throw new Error(data.error||("HTTP "+res.status));
+ return data;
+}
+function showStatus(msg,good=false){status.textContent=msg;status.style.borderLeftColor=good?"#69c58b":"#e7bf70"}
+async function refresh(){
+ try{
+  const data=await api("/api/office");
+  list.innerHTML=data.tasks.length?data.tasks.map(t=>'<div class="taskRow"><b>#'+t.id+' · '+escapeHtml(t.title)+'</b><br><small>'+escapeHtml(t.assigned_agent||"Unassigned")+' · '+escapeHtml(t.priority)+' · '+escapeHtml(t.status)+'</small>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+'<div class="huntActions"><button data-task-status="'+t.id+'" data-status="in_progress">START</button><button data-task-status="'+t.id+'" data-status="completed">COMPLETE</button><button data-task-status="'+t.id+'" data-status="blocked">BLOCK</button></div></div>').join(""):'<p style="color:#b7c4ad">No cloud tasks yet.</p>';
+  showStatus("Connected to Cloudflare D1 · "+data.tasks.length+" task(s) loaded.",true);
+ }catch(e){showStatus("Connection error: "+e.message);list.innerHTML=""}
+}
+function escapeHtml(v){return String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
+$("taskDesk").onclick=()=>{$("taskModal").style.display="block";if(connectedKey)refresh()};
+$("taskClose").onclick=()=>{$("taskModal").style.display="none"};
+$("saveOfficeKey").onclick=async()=>{connectedKey=keyInput.value.trim();if(!connectedKey){showStatus("Please enter your private access key.");return}sessionStorage.setItem(keyName,connectedKey);await refresh()};
+$("forgetOfficeKey").onclick=()=>{connectedKey="";keyInput.value="";sessionStorage.removeItem(keyName);list.innerHTML="";showStatus("Key cleared from this browser session.")};
+$("refreshTasks").onclick=refresh;
+$("createTask").onclick=async()=>{
+ const title=$("newTaskTitle").value.trim();if(!title){showStatus("Enter a task title first.");return}
+ try{await api("/api/office/tasks","POST",{title,description:$("newTaskDescription").value,assigned_agent:$("newTaskAgent").value,priority:$("newTaskPriority").value});$("newTaskTitle").value="";$("newTaskDescription").value="";await refresh()}
+ catch(e){showStatus("Could not save task: "+e.message)}
+};
+list.addEventListener("click",async e=>{
+ const b=e.target.closest("button[data-task-status]");if(!b)return;
+ try{await api("/api/office/tasks/"+b.dataset.taskStatus,"PATCH",{status:b.dataset.status,agent_name:"Owner"});await refresh()}
+ catch(err){showStatus("Could not update task: "+err.message)}
+});
 })();
 </script></body></html>
