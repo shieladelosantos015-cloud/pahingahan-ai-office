@@ -43,12 +43,27 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
  #joystick{display:block}#hint{bottom:145px;font-size:8px}
  #activity{font-size:9px;max-height:85px}
 }
+
+#huntModal{display:none;position:fixed;inset:0;z-index:30;background:#07100deF;overflow:auto;padding:16px}
+#huntPanel{max-width:850px;margin:12px auto;background:#122019;border:1px solid #75876a;border-radius:16px;padding:16px;box-shadow:0 18px 60px #000b}
+#huntPanel h2{color:var(--gold);margin:0 0 6px;font-size:19px}#huntPanel p{color:#c5d2c0;font-size:11px;line-height:1.5}
+.huntGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.huntField{display:flex;flex-direction:column;gap:4px;color:#d8e3d1;font-size:10px;font-weight:700}
+.huntField input,.huntField textarea,.huntField select{width:100%;background:#09140e;color:#f4ead4;border:1px solid #66795e;border-radius:8px;padding:10px;font:12px system-ui;min-width:0}
+.huntField textarea{min-height:68px;resize:vertical}.huntWide{grid-column:1/-1}
+.huntActions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+#groupList,#leadList{display:grid;gap:6px;margin-top:8px}
+.huntItem{border:1px solid #4d634b;border-radius:9px;padding:9px;background:#0b170f;font-size:11px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.huntItem a{color:#edcb85}.huntItem small{color:#b7c4ad}
+#draftBox{white-space:pre-wrap;background:#09140e;border:1px solid #687b60;border-radius:9px;padding:11px;font-size:12px;line-height:1.5;color:#f4ead4;min-height:50px}
+.huntNotice{border-left:3px solid #e7bf70;padding:8px 10px;background:#263426;color:#dce6d6;font-size:10px;margin:10px 0}
+@media(max-width:600px){#huntModal{padding:7px}#huntPanel{margin:3px auto;padding:12px}.huntGrid{grid-template-columns:1fr}.huntWide{grid-column:auto}}
 </style>
 </head>
 <body><div id="app">
 <header><div class="brand">🏡 PAHINGAHAN AI OFFICE<small>VIRTUAL HEADQUARTERS · OWNER CONTROL</small></div><div id="headerRight"><span class="liveDot"></span><span>OFFICE SIMULATION ONLINE</span></div></header>
 <main id="main"><canvas id="view"></canvas>
-<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button></div>
+<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button></div>
 <section id="brandCard"><div class="eyebrow">PAHINGAHAN · HQ</div><div class="big">Operations Floor</div><div class="sub">Four AI departments · Owner-controlled booking approval · 3D virtual workspace</div></section>
 <aside id="side">
  <section class="card"><h3>✦ TEAM STATUS</h3>
@@ -62,6 +77,27 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 <div id="departments"><button data-room="Reception">RECEPTION</button><button data-room="Guest Relations">GUEST RELATIONS</button><button data-room="Booking">BOOKING</button><button data-room="Manager">MANAGER</button><button data-room="Pantry">PANTRY</button><button data-room="Lounge">LOUNGE</button></div>
 <div id="joystick"><div id="stick"></div></div><div id="hint">Tap an agent or department • Drag to look around in Walk Mode</div>
 <div id="info"><h2 id="infoTitle">Office</h2><p id="infoText"></p><button class="gold" id="infoClose">CLOSE</button></div>
+<div id="huntModal"><section id="huntPanel">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · CLIENT HUNTING</div><h2>Lead Finder & Reply Desk</h2></div><button id="huntClose">CLOSE ✕</button></div>
+ <p>Assisted prospecting workspace. Ilagay ang public post details o inquiry na ikaw mismo ang may access. Gumagawa ito ng draft reply at lead record sa browser na ito.</p>
+ <div class="huntNotice">Hindi nito awtomatikong sini-scan ang Facebook Groups o nagpapadala ng messages. Ang “Approve” ay internal approval lamang; ikaw ang magko-copy at magpapadala sa Facebook.</div>
+ <h3>🎯 Target Facebook Groups (9)</h3><div id="groupList"></div>
+ <h3 style="margin-top:16px;color:var(--gold)">➕ Add potential client</h3>
+ <div class="huntGrid">
+  <label class="huntField">Source group<select id="leadGroup"></select></label>
+  <label class="huntField">Client name / profile (optional)<input id="leadName" placeholder="Name shown publicly"></label>
+  <label class="huntField huntWide">Facebook post URL<input id="leadUrl" type="url" placeholder="https://www.facebook.com/..."></label>
+  <label class="huntField huntWide">Post / inquiry text<textarea id="leadText" placeholder="Paste the public post or inquiry text here..."></textarea></label>
+  <label class="huntField">Requested date (if stated)<input id="leadDate" placeholder="e.g. Dec 15"></label>
+  <label class="huntField">Guests (if stated)<input id="leadGuests" placeholder="e.g. 4"></label>
+ </div>
+ <div class="huntActions"><button class="gold" id="makeDraft">FILTER & GENERATE REPLY</button><button id="saveLead">SAVE LEAD</button></div>
+ <div id="leadAssessment" class="huntNotice" style="display:none"></div>
+ <h3 style="color:var(--gold)">✍️ Suggested reply</h3><div id="draftBox">Paste a public inquiry above, then tap FILTER & GENERATE REPLY.</div>
+ <div class="huntActions"><button id="copyDraft">COPY REPLY</button><button id="approveDraft">MARK APPROVED</button></div>
+ <h3 style="color:var(--gold);margin-top:18px">📋 Lead tracker</h3><div id="leadList"></div>
+ <div class="huntActions"><button id="huntCloseBottom">CLOSE</button></div>
+</section></div>
 </main><footer><span>3D OFFICE · INTERACTIVE ENVIRONMENT</span><span>AI TASK EXECUTION CONNECTS IN THE NEXT INTEGRATION PHASE</span></footer>
 </div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
@@ -175,5 +211,54 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDel
  else{camera.position.lerp(topTarget,.06);camera.lookAt(0,0,0)}
  updateTasks();renderer.render(scene,camera)}
 setMode(false);animate();
+})();
+</script>
+<script>
+(()=>{
+const groups=[
+{name:"Stay Cation Quezon City / Metro Manila",url:"https://www.facebook.com/share/g/1EF6dNS5Un/"},
+{name:"Group #2 (name pending)",url:"https://www.facebook.com/share/g/1E2QRqXcRM/"},
+{name:"Group #3 (name pending)",url:"https://www.facebook.com/share/g/1CLmfRFCWV/"},
+{name:"Group #4 (name pending)",url:"https://www.facebook.com/share/g/1A9UrJ8GGT/"},
+{name:"Group #5 (name pending)",url:"https://www.facebook.com/share/g/1FjNni4Zpy/"},
+{name:"Group #6 (name pending)",url:"https://www.facebook.com/share/g/1HE89RmCcR/"},
+{name:"Group #7 (name pending)",url:"https://www.facebook.com/share/g/1F165wgm4j/"},
+{name:"Group #8 (name pending)",url:"https://www.facebook.com/share/g/1Q5JHT9VLo/"},
+{name:"Group #9 (name pending)",url:"https://www.facebook.com/share/g/1FHhBqFjjZ/"}
+];
+const $=id=>document.getElementById(id), storeKey="pahingahan_client_hunt_leads_v1";
+let leads=[];try{leads=JSON.parse(localStorage.getItem(storeKey)||"[]")}catch(e){}
+let currentDraft="";
+function persist(){localStorage.setItem(storeKey,JSON.stringify(leads));renderLeads()}
+function renderGroups(){
+ $("groupList").innerHTML=groups.map((g,i)=>'<div class="huntItem"><span><b>#'+(i+1)+' '+g.name+'</b><br><small>Target Facebook group</small></span><a href="'+g.url+'" target="_blank" rel="noopener">OPEN GROUP ↗</a></div>').join("");
+ $("leadGroup").innerHTML=groups.map((g,i)=>'<option value="'+i+'">#'+(i+1)+' '+g.name+'</option>').join("");
+}
+function renderLeads(){
+ $("leadList").innerHTML=leads.length?leads.slice().reverse().map((l,ri)=>{const i=leads.length-1-ri;return '<div class="huntItem"><span><b>'+(l.name||"Unnamed lead")+'</b><br><small>'+l.status+' · '+l.group+' · '+l.date+'</small><br><small>'+l.text.slice(0,150).replace(/</g,"&lt;")+'</small></span><span><button data-copy="'+i+'">COPY DRAFT</button> <button data-remove="'+i+'">DELETE</button></span></div>'}).join(""):'<p>No leads saved yet. Add a public inquiry to start.</p>';
+ $("leadList").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{const l=leads[+b.dataset.copy];navigator.clipboard?.writeText(l.reply||"");});
+ $("leadList").querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{leads.splice(+b.dataset.remove,1);persist()});
+}
+function classify(t){const x=t.toLowerCase();const intent=/looking for|hanap|recommend|suggest|staycation|stay cation|overnight|room|accommodation|pahinga|vacation|booking|available|avail|need a place|saan.*stay/.test(x);const urgency=/today|tonight|tomorrow|bukas|mamaya|this weekend|weekend|december|november|january|february|march|april|may|june|july|august|september|october/.test(x);return {intent,urgency,score:(intent?2:0)+(urgency?1:0)}}
+function makeReply(text,date,guests){
+ const c=classify(text);
+ if(!c.intent)return {assessment:"Low match: hindi malinaw na naghahanap ng staycation/accommodation. I-review muna kung relevant.",reply:"Hello po! 😊 If naghahanap po kayo ng staycation, message lang po kami para ma-assist namin kayo."};
+ let r="Hello po! 😊 Baka interested po kayo sa Pahingahan Stay Cation. Our rate is ₱1,950 for 22 hours, with check-in at 2:00 PM and check-out at 12:00 noon the next day.";
+ if(date)r+=" For your preferred date ("+date+"), owner/admin po ang magche-check ng actual availability.";
+ else r+=" May preferred date po ba kayo?";
+ if(guests)r+=" Ilan po kayong guests ("+guests+")?";else r+=" Ilan po kayong guests?";
+ r+=" Additional person is ₱200 each. 😊";
+ return {assessment:"Potential match: may staycation/accommodation intent"+(c.urgency?" at may date/time clue.":"." )+" Verify the post context before contacting.",reply:r};
+}
+function getData(){return {name:$("leadName").value.trim(),url:$("leadUrl").value.trim(),text:$("leadText").value.trim(),date:$("leadDate").value.trim(),guests:$("leadGuests").value.trim(),group:groups[+$("leadGroup").value].name}}
+$("makeDraft").onclick=()=>{const d=getData();if(!d.text){$("leadAssessment").style.display="block";$("leadAssessment").textContent="Ilagay muna ang post o inquiry text.";return}const r=makeReply(d.text,d.date,d.guests);currentDraft=r.reply;$("leadAssessment").style.display="block";$("leadAssessment").textContent=r.assessment;$("draftBox").textContent=currentDraft};
+$("saveLead").onclick=()=>{const d=getData();if(!d.text){$("leadAssessment").style.display="block";$("leadAssessment").textContent="Ilagay muna ang post o inquiry text bago i-save.";return}const r=makeReply(d.text,d.date,d.guests);leads.push({...d,reply:currentDraft||r.reply,status:"For review",savedAt:new Date().toISOString()});persist();$("leadAssessment").style.display="block";$("leadAssessment").textContent="Lead saved locally on this device. Review before contacting."};
+$("copyDraft").onclick=()=>{if(!currentDraft)return;const b=$("copyDraft");navigator.clipboard?.writeText(currentDraft).then(()=>b.textContent="COPIED ✓").catch(()=>{$("draftBox").focus()})};
+$("approveDraft").onclick=()=>{if(!currentDraft){$("leadAssessment").style.display="block";$("leadAssessment").textContent="Generate a reply first.";return}const d=getData(),r=makeReply(d.text,d.date,d.guests);leads.push({...d,reply:currentDraft,status:"Owner approved (not sent)",savedAt:new Date().toISOString()});persist();$("leadAssessment").style.display="block";$("leadAssessment").textContent="Marked approved and saved. Hindi ito ipinadala sa Facebook; copy the reply and send it manually."};
+function open(){ $("huntModal").style.display="block";renderGroups();renderLeads()}
+function close(){ $("huntModal").style.display="none"}
+$("huntClose").onclick=close;$("huntCloseBottom").onclick=close;
+$("clientHunt").onclick=open;
+renderGroups();renderLeads();
 })();
 </script></body></html>
