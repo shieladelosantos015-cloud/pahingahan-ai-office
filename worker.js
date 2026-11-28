@@ -227,6 +227,64 @@ function requestedCalendarMonth(message) {
   return { year:Number(parts.find(p => p.type === 'year').value), month:Number(parts.find(p => p.type === 'month').value) };
 }
 
+function requestedAvailabilityMonth(message) {
+  const text = String(message || "").toLowerCase();
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone:"Asia/Manila", year:"numeric", month:"numeric" }).formatToParts(now);
+  let year = Number(parts.find(p => p.type === "year").value);
+  let month = Number(parts.find(p => p.type === "month").value);
+  const monthNames = { january:1, jan:1, february:2, feb:2, march:3, mar:3, april:4, apr:4, may:5, june:6, jun:6, july:7, jul:7, august:8, aug:8, september:9, sept:9, sep:9, october:10, oct:10, november:11, nov:11, december:12, dec:12 };
+  const named = text.match(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)(?:\s+(20\d{2}))?\b/i);
+  if (named) {
+    month = monthNames[named[1]];
+    if (named[2]) year = Number(named[2]);
+    else if (month < Number(parts.find(p => p.type === "month").value)) year += 1;
+  } else if (/\b(next month|next month|susunod na buwan|sa susunod na buwan|next na buwan)\b/i.test(text)) {
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+  } else if (!/\b(this month|this month|ngayong buwan|ngayong month|buwan na ito|month na ito|this month's)\b/i.test(text)) {
+    return null;
+  }
+  return { year, month };
+}
+
+function asksMonthlyAvailability(message) {
+  const text = String(message || "").toLowerCase();
+  const asksAvailability = /\b(available|availability|bakante|bakanteng|may slot|open|vacant|free)\b/.test(text);
+  const asksMonth = /\b(this month|ngayong buwan|ngayong month|buwan na ito|month na ito|next month|susunod na buwan|sa susunod na buwan|next na buwan|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/.test(text);
+  const asksDates = /\b(date|dates|araw|schedule|slots|slot)\b/.test(text) || /may available/.test(text);
+  return asksAvailability && asksMonth && asksDates && !/\b(calendar|picture|photo|image|screenshot)\b/.test(text);
+}
+
+async function checkMonthAvailability(env, monthInfo) {
+  const { year, month } = monthInfo;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const today = manilaToday();
+  const available = [];
+  const unavailable = [];
+  const errors = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = makeDateString(year, month, day);
+    if (date < today) continue;
+    try {
+      const result = await callGoogleCalendar(env, { action:"availability", date });
+      if (!result || result.success !== true || typeof result.available !== "boolean") {
+        errors.push(date);
+        console.error("Monthly availability response invalid:", date, JSON.stringify(result || {}).slice(0, 900));
+      } else if (result.available) {
+        available.push(day);
+      } else {
+        unavailable.push(day);
+      }
+    } catch (error) {
+      errors.push(date);
+      console.error("Monthly availability check failed:", date, error && error.message);
+    }
+  }
+  if (errors.length) throw new Error("Could not verify all requested month dates: " + errors.join(", "));
+  return { available, unavailable, checkedFrom: today };
+}
+
 async function buildCalendarImageUrl(env, monthInfo) {
   const year = monthInfo.year;
   const month = monthInfo.month;
@@ -316,6 +374,22 @@ async function sendMessengerImage(recipientId, imageUrl, env) {
 
 async function buildMessengerReply(message, env, senderId) {
   const lowerMessage = String(message || '').toLowerCase();
+  if (asksMonthlyAvailability(message)) {
+    try {
+      const monthInfo = requestedAvailabilityMonth(message);
+      if (!monthInfo) return "Anong buwan po ang gusto ninyong ipa-check? 😊";
+      const result = await checkMonthAvailability(env, monthInfo);
+      const monthLabel = new Intl.DateTimeFormat("en-US", { month:"long", timeZone:"UTC" }).format(new Date(Date.UTC(monthInfo.year, monthInfo.month - 1, 1)));
+      if (result.available.length) {
+        const dates = result.available.join(", ");
+        return "Upon checking our Google Calendar, may available dates pa po tayo ngayong " + monthLabel + " " + monthInfo.year + ": " + dates + ". 😊\n\nAng mga petsang ito ay available sa oras ng pag-check. Para ma-check ang specific date at maipagpatuloy ang booking, message lang po kayo ng napili ninyong date.";
+      }
+      return "Upon checking our Google Calendar, wala na po tayong available dates ngayong " + monthLabel + " " + monthInfo.year + ". Fully booked na po ang mga natitirang dates. 😊 Maaari po nating i-check ang ibang buwan.";
+    } catch (error) {
+      console.error("Monthly availability check failed:", error && error.message);
+      return "Pasensya na po, hindi ko ma-verify ang lahat ng dates sa calendar ngayon. Ayokong magbigay ng maling availability. Maaari po bang subukan ulit mamaya? 😊";
+    }
+  }
   const asksCalendarImage = hasAny(lowerMessage, ['picture of calendar','photo of calendar','calendar picture','calendar photo','send calendar','show calendar','calendar image','picture ng calendar','photo ng calendar','screenshot ng calendar','calendar po','calendar','available dates','open dates','available slots','bakanteng dates']);
   if (asksCalendarImage) {
     try {
