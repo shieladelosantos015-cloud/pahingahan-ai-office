@@ -259,6 +259,7 @@ async function buildCalendarImageUrl(env, monthInfo) {
       const y = Math.floor((firstWeekday + day - 1) / 7);
       if (entry.error || !entry.result || entry.result.success !== true || typeof entry.result.available !== 'boolean') {
         errors.push(date);
+        console.error('Calendar image availability response invalid:', date, JSON.stringify(entry.result || { requestError:true }).slice(0, 1200));
         continue;
       }
       const point = { x, y, day, v:day };
@@ -266,7 +267,7 @@ async function buildCalendarImageUrl(env, monthInfo) {
     }
   }
 
-  if (errors.length) throw new Error('Could not verify all dates in the requested month.');
+  if (errors.length) throw new Error('Could not verify dates: ' + errors.join(', '));
   const monthName = new Intl.DateTimeFormat('en-US', { month:'long', timeZone:'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)));
   const config = {
     type:'matrix',
