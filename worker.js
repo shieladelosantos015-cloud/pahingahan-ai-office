@@ -286,6 +286,16 @@ async function handleOfficeApi(request, env) {
       let reason = "AI could not confidently classify the task; manager review is required.";
       let title = ("Manager delegation: " + instruction).slice(0, 200);
 
+      function normalizeAgent(value) {
+        const candidate = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        if (/customer|client relations|customer service|guest relations|support|crm/.test(candidate)) return "Customer Relations";
+        if (/client hunting|lead generation|prospect|sales|marketing/.test(candidate)) return "Client Hunting";
+        if (/creative|editing|design|content|social media/.test(candidate)) return "Creative & Editing";
+        if (/booking|schedul|reservation|calendar/.test(candidate)) return "Booking & Scheduling";
+        if (/general manager|manager|operations/.test(candidate)) return "General Manager";
+        return null;
+      }
+
       try {
         const aiResult = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
           messages: [
@@ -331,10 +341,11 @@ async function handleOfficeApi(request, env) {
         if (!parsed) {
           throw new Error("Workers AI response did not contain a valid JSON delegation object. Response shape: " + JSON.stringify(aiResult).slice(0, 350));
         }
-        if (!allowedAgents.includes(parsed.assigned_agent)) {
-          throw new Error("AI returned an unknown department.");
+        const normalizedAgent = normalizeAgent(parsed.assigned_agent);
+        if (!normalizedAgent || !allowedAgents.includes(normalizedAgent)) {
+          throw new Error("AI returned an unrecognized department label: " + String(parsed.assigned_agent).slice(0, 120));
         }
-        agent = parsed.assigned_agent;
+        agent = normalizedAgent;
         reason = String(parsed.reason || reason).slice(0, 300);
         title = String(parsed.task_title || title).slice(0, 200);
       } catch (error) {
