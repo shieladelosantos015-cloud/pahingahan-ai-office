@@ -312,10 +312,11 @@ async function handleOfficeApi(request, env) {
         reason = String(parsed.reason || reason).slice(0, 300);
         title = String(parsed.task_title || title).slice(0, 200);
       } catch (error) {
-        console.error("Manager AI delegation failed:", error && error.message);
+        const detail = String(error && (error.stack || error.message) || error || "Unknown Workers AI error").slice(0, 700);
+        console.error("Manager AI delegation failed:", detail);
         return json({
-          error: "Michael could not analyze this instruction with Workers AI. No task was created.",
-          details: String(error && error.message || "AI request failed").slice(0, 300)
+          error: "Michael could not analyze this instruction. Workers AI detail: " + detail,
+          details: detail
         }, 502);
       }
 
