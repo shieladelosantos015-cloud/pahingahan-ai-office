@@ -248,7 +248,7 @@ async function buildCalendarImageUrl(env, monthInfo) {
         errors.push(date);
         continue;
       }
-      const point = { x, y, day, v:1 };
+      const point = { x, y, day, v:day };
       (result.available ? available : unavailable).push(point);
     } catch (error) {
       console.error('Calendar image date check failed:', date, error && error.message);
@@ -271,7 +271,7 @@ async function buildCalendarImageUrl(env, monthInfo) {
       plugins:{
         title:{ display:true, text:'PAHINGAHAN STAY CATION — '+monthName.toUpperCase()+' '+year, font:{size:24,weight:'bold'}, color:'#20252b', padding:18 },
         legend:{ display:true, position:'bottom', labels:{font:{size:16}, usePointStyle:true, padding:20} },
-        datalabels:{ display:true, color:'#ffffff', font:{size:16,weight:'bold'}, formatter:(ctx)=>ctx.raw.day }
+        datalabels:{ display:true, color:'#ffffff', font:{size:16,weight:'bold'} }
       },
       scales:{
         x:{ type:'linear', min:-0.5, max:6.5, ticks:{ stepSize:1, callback:(v)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][v], font:{size:14,weight:'bold'} }, grid:{display:false}, offset:true },
@@ -305,7 +305,7 @@ async function sendMessengerImage(recipientId, imageUrl, env) {
 
 async function buildMessengerReply(message, env, senderId) {
   const lowerMessage = String(message || '').toLowerCase();
-  const asksCalendarImage = hasAny(lowerMessage, ['picture of calendar','photo of calendar','calendar picture','calendar photo','send calendar','show calendar','calendar image','picture ng calendar','photo ng calendar','screenshot ng calendar','calendar po','calendar']);
+  const asksCalendarImage = hasAny(lowerMessage, ['picture of calendar','photo of calendar','calendar picture','calendar photo','send calendar','show calendar','calendar image','picture ng calendar','photo ng calendar','screenshot ng calendar','calendar po','calendar','available dates','open dates','available slots','bakanteng dates']);
   if (asksCalendarImage) {
     try {
       const monthInfo = requestedCalendarMonth(message);
