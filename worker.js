@@ -211,13 +211,13 @@ async function buildMessengerReply(message, env, senderId) {
   const activeInquiry = await getActiveBookingInquiry(env, senderId);
   if (activeInquiry && activeInquiry.status === 'awaiting_details') {
     const saved = await saveBookingInquiryDetails(env, activeInquiry, parseBookingDetails(message));
-    if (saved.status === 'awaiting_owner_payment') return 'Salamat po, ' + saved.name + '! 😊 Na-record ko na ang request ninyo para sa ' + activeInquiry.requested_date + ' para sa ' + saved.guests + ' guest(s). Ipapasa ko po ito sa owner para sa payment/downpayment instructions. Hindi pa po confirmed ang booking hangga\'t hindi kinukumpirma ng owner ang payment.';
+    if (saved.status === 'awaiting_owner_payment') return 'Salamat po, ' + saved.name + '! 😊 Na-note ko na ang request ninyo para sa ' + activeInquiry.requested_date + ' para sa ' + saved.guests + ' guest(s). Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 reservation downpayment para ma-secure ang slot; puwede rin pong full payment na ₱1,400. Ang remaining balance after downpayment ay ₱700, hindi pa kasama ang additional person kung meron. Alin po ang preferred ninyo? Kapag ready na po kayo, owner mismo ang magbibigay ng payment details. Hindi pa reserved ang slot hangga\'t hindi verified ang payment.';
     const missing = []; if (!saved.name) missing.push('pangalan'); if (!saved.guests) missing.push('bilang ng guests');
     return 'Salamat po! Para maipasa ko nang tama ang request, pakisagot po ang ' + missing.join(' at ') + '. Halimbawa: Pangalan: Maria Santos; Guests: 4 😊';
   }
   if (activeInquiry && activeInquiry.status === 'awaiting_owner_payment') {
-    if (hasAny(message.toLowerCase(), ['payment', 'downpayment', 'down payment', 'bayad', 'gcash', 'bank', 'deposit'])) return HANDOFF;
-    return 'Nakuha na po ng owner ang booking request ninyo para sa ' + activeInquiry.requested_date + '. Para po sa payment/downpayment, please wait lang po muna sandali. Ako po ang magbibigay sa inyo ng payment details kung saan ninyo puwedeng i-send ang downpayment. Thank you po! 😊';
+    if (hasAny(message.toLowerCase(), ['payment', 'downpayment', 'down payment', 'bayad', 'gcash', 'bank', 'deposit', 'full', '700', '1400', 'ready', 'sige', 'go'])) return HANDOFF;
+    return 'Naka-note na po ang booking request ninyo para sa ' + activeInquiry.requested_date + '. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede pong full payment na ₱1,400. Kapag ready na po kayo, owner mismo ang magbibigay ng payment details. 😊';
   }
   const s = message.toLowerCase();
   const asksAvailability = hasAny(s, ["available", "availability", "bakante", "may slot", "open pa", "vacant", "free pa", "gusto mag book", "want to book", "mag book", "mag-book", "pa-book", "pabook", "booking"]);
@@ -236,7 +236,7 @@ async function buildMessengerReply(message, env, senderId) {
     }
     if (result.available === true) {
       await env.DB.prepare("INSERT INTO booking_inquiries (sender_id, requested_date, status) VALUES (?, ?, 'awaiting_details')").bind(senderId, date).run();
-      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Halimbawa: Pangalan: Maria Santos; Guests: 4. Hindi pa po reserved ang slot hangga't hindi kinukumpirma ng owner ang payment at booking.";
+      return "Available po ang " + date + "! 😊 Para maipasa ko ang booking request, pakibigay po ang inyong pangalan at bilang ng guests. Halimbawa: Pangalan: Maria Santos; Guests: 4. Ang rate po ay ₱1,400 for 22 hours, plus ₱150 bawat additional person. Required po ang ₱700 downpayment para ma-secure ang slot, o puwede ring full payment na ₱1,400. Hindi pa po reserved ang slot hangga't hindi verified ang payment.";
     }
     return "Pasensya na po, hindi na available ang " + date + ". 😊 May iba pa po ba kayong preferred date para ma-check ko rin?";
   } catch (error) {
@@ -264,7 +264,7 @@ function buildFaqReply(message) {
   }
 
   if (hasAny(s, ["magkano", "presyo", "price", "rate", "rates", "hm", "how much", "cost"])) {
-    return "₱1,950 po ang rate for 22 hours. Check-in po ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊";
+    return "₱1,400 po ang rate for 22 hours. Check-in po ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊";
   }
 
   if (hasAny(s, ["check in", "check-in", "checkin", "oras pasok"])) {
@@ -280,7 +280,7 @@ function buildFaqReply(message) {
   }
 
   if (hasAny(s, ["additional", "extra person", "extra guest", "dagdag na tao", "per head", "per person"])) {
-    return "₱200 po bawat additional person. 😊";
+    return "₱150 po bawat additional person. 😊";
   }
 
   if (hasAny(s, ["booking", "book", "reservation", "mag reserve", "mag-reserve", "paano magbook"])) {
@@ -291,7 +291,7 @@ function buildFaqReply(message) {
     return "Hello po! Welcome sa Pahingahan Stay Cation. 😊 Ano pong maitutulong namin? Maaari po kayong magtanong tungkol sa rates, check-in/check-out, additional person, o booking.";
   }
 
-  return "Salamat po sa pag-message sa Pahingahan Stay Cation! 😊 Ang rate po ay ₱1,950 for 22 hours; check-in ay 2:00 PM at check-out ay 12:00 noon kinabukasan. Para sa ibang detalye, owner/admin po ang makakapag-confirm.";
+  return "Salamat po sa pag-message sa Pahingahan Stay Cation! 😊 Ang rate po ay ₱1,400 for 22 hours; check-in ay 2:00 PM at check-out ay 12:00 noon kinabukasan. Para sa ibang detalye, owner/admin po ang makakapag-confirm.";
 }
 
 function hasAny(value, words) {
@@ -582,7 +582,7 @@ async function handleOfficeApi(request, env) {
                 "The owner handles all payment instructions and final booking confirmation. Direct payment questions and requests to pay to the owner/admin. Never invent payment methods, account details, or payment instructions.",
                 "A requested slot may be held for 4 hours while payment is arranged ONLY if the owner confirms the hold. Never imply a hold or availability without confirmation.",
                 "Never invent included guest count, amenities, address, capacity, availability, house rules, or policies. For unknown amenities/location, say owner/admin will confirm the verified details. Never output placeholders.",
-                "Create a concise playbook and complete ready-to-send Messenger replies. Use these styles: Greeting: 'Hello po! Welcome sa Pahingahan Stay Cation. 😊 Ano pong maitutulong namin?' Price: '₱1,950 po ang rate natin for 22 hours. Check-in po ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊' Booking: 'Sure po! 😊 Anong preferred date ninyo at ilan po kayong guests? Iche-check po ng owner/admin ang availability at siya rin ang magbibigay ng final confirmation.' Availability: 'Iche-check po muna ng owner/admin kung available ang preferred date ninyo. Anong date po ang balak ninyo?' Check-in: 'Check-in po ay 2:00 PM.' Checkout: 'Check-out po ay 12:00 noon kinabukasan.' Extra guests: '₱200 po ang bawat additional person.' Amenities/location: 'Para sa verified details tungkol sa amenities at location, owner/admin po muna ang magko-confirm. 😊' Payment: 'Owner/admin po mismo ang magbibigay ng payment instructions. Paki-message po sila directly para sa tamang details.' Final confirmation: 'Owner/admin po ang magbibigay ng final booking confirmation. Maraming salamat po!'",
+                "Create a concise playbook and complete ready-to-send Messenger replies. Use these styles: Greeting: 'Hello po! Welcome sa Pahingahan Stay Cation. 😊 Ano pong maitutulong namin?' Price: '₱1,400 po ang rate natin for 22 hours. Check-in po ay 2:00 PM at check-out ay 12:00 noon kinabukasan. 😊' Booking: 'Sure po! 😊 Anong preferred date ninyo at ilan po kayong guests? Iche-check po ng owner/admin ang availability at siya rin ang magbibigay ng final confirmation.' Availability: 'Iche-check po muna ng owner/admin kung available ang preferred date ninyo. Anong date po ang balak ninyo?' Check-in: 'Check-in po ay 2:00 PM.' Checkout: 'Check-out po ay 12:00 noon kinabukasan.' Extra guests: '₱150 po ang bawat additional person.' Amenities/location: 'Para sa verified details tungkol sa amenities at location, owner/admin po muna ang magko-confirm. 😊' Payment: 'Owner/admin po mismo ang magbibigay ng payment instructions. Paki-message po sila directly para sa tamang details.' Final confirmation: 'Owner/admin po ang magbibigay ng final booking confirmation. Maraming salamat po!'",
                 "Keep each customer reply short, natural, courteous, and directly usable. Do not use phrases like 'kailangan mo ng tawagan', 'sila ang magpapakita', or 'mabuti ba ang araw mo'.",
                 "Include staff safety notes. Output plain text, not JSON."
               ].join(" "),
