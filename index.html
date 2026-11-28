@@ -71,7 +71,7 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 <body><div id="app">
 <header><div class="brand">🏡 PAHINGAHAN AI OFFICE<small>VIRTUAL HEADQUARTERS · OWNER CONTROL</small></div><div id="headerRight"><span class="liveDot"></span><span>OFFICE SIMULATION ONLINE</span></div></header>
 <main id="main"><canvas id="view"></canvas>
-<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button><button id="taskDesk">TASK DESK</button></div>
+<div id="topbar"><button id="overview" class="active">TOP VIEW</button><button id="first">WALK MODE</button><button id="reset">RESET</button><button id="clientHunt" class="gold">CLIENT HUNTING</button><button id="taskDesk">TASK DESK</button><button id="managerDesk" class="gold">MANAGER</button></div>
 <section id="brandCard"><div class="eyebrow">PAHINGAHAN · HQ</div><div class="big">Operations Floor</div><div class="sub">Four AI departments · Owner-controlled booking approval · 3D virtual workspace</div></section>
 <aside id="side">
  <section class="card"><h3>✦ TEAM STATUS</h3>
@@ -92,7 +92,12 @@ footer{display:flex;align-items:center;justify-content:space-between;padding:6px
 <input id="officeKey" class="taskInput" type="password" autocomplete="off" placeholder="Paste your private access key">
 <div class="huntActions"><button id="saveOfficeKey" class="gold">CONNECT</button><button id="forgetOfficeKey">CLEAR KEY</button><button id="refreshTasks">REFRESH TASKS</button></div>
 <div id="taskConnection" class="huntNotice">Not connected. Enter your private key to connect.</div>
-<h3 style="color:var(--gold)">＋ CREATE TASK</h3>
+<h3 style="color:var(--gold)">✦ GENERAL MANAGER · DELEGATE WORK</h3>
+<p style="color:#c5d2c0;font-size:11px">Ilagay ang instruction. Gagamit ang Manager ng built-in routing rules para pumili ng department at gumawa ng cloud task. Hindi pa ito generative AI.</p>
+<label class="taskLabel">OWNER INSTRUCTION</label><textarea id="managerInstruction" class="taskInput" rows="3" maxlength="2000" placeholder="e.g. Gumawa ng promotional post para sa weekend staycation"></textarea>
+<div class="huntActions"><button id="delegateTask" class="gold">ANALYZE & DELEGATE</button></div>
+<div id="managerResult" class="huntNotice">Waiting for your instruction.</div>
+<h3 style="color:var(--gold)">＋ CREATE TASK MANUALLY</h3>
 <label class="taskLabel">TASK TITLE</label><input id="newTaskTitle" class="taskInput" maxlength="200" placeholder="e.g. Review today's booking inquiries">
 <label class="taskLabel">DESCRIPTION</label><textarea id="newTaskDescription" class="taskInput" rows="3" maxlength="3000" placeholder="Task details and expected result"></textarea>
 <label class="taskLabel">ASSIGN TO</label><select id="newTaskAgent" class="taskInput"><option>General Manager</option><option>Customer Relations</option><option>Client Hunting</option><option>Creative & Editing</option><option>Booking & Scheduling</option></select>
@@ -359,6 +364,19 @@ async function refresh(){
 }
 function escapeHtml(v){return String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 $("taskDesk").onclick=()=>{$("taskModal").style.display="block";if(connectedKey)refresh()};
+$("managerDesk").onclick=()=>{$("taskModal").style.display="block";$("managerInstruction").focus();if(connectedKey)refresh()};
+$("delegateTask").onclick=async()=>{
+ const instruction=$("managerInstruction").value.trim();
+ const result=$("managerResult");
+ if(!instruction){result.textContent="Ilagay muna ang instruction.";return}
+ result.textContent="Manager is reviewing the instruction...";
+ try{
+  const data=await api("/api/office/manager/delegate","POST",{instruction});
+  result.textContent="Delegated to "+data.assigned_agent+". Cloud task #"+data.id+" created. Reason: "+data.reason;
+  $("managerInstruction").value="";
+  await refresh();
+ }catch(e){result.textContent="Delegation failed: "+e.message}
+};
 $("taskClose").onclick=()=>{$("taskModal").style.display="none"};
 $("saveOfficeKey").onclick=async()=>{connectedKey=keyInput.value.trim();if(!connectedKey){showStatus("Please enter your private access key.");return}sessionStorage.setItem(keyName,connectedKey);await refresh()};
 $("forgetOfficeKey").onclick=()=>{connectedKey="";keyInput.value="";sessionStorage.removeItem(keyName);list.innerHTML="";showStatus("Key cleared from this browser session.")};
