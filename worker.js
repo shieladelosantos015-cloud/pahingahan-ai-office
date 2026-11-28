@@ -279,7 +279,7 @@ async function handleOfficeApi(request, env) {
     if (request.method === "POST" && path === "/api/office/calendar/availability") {
       const body = await request.json();
       const date = String(body.date || "");
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
         return json({ error: "A valid date in YYYY-MM-DD format is required." }, 400);
       }
       const result = await callGoogleCalendar(env, {
@@ -293,7 +293,7 @@ async function handleOfficeApi(request, env) {
     if (request.method === "POST" && path === "/api/office/calendar/book") {
       const body = await request.json();
       const date = String(body.date || "");
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
         return json({ error: "A valid date in YYYY-MM-DD format is required." }, 400);
       }
       if (body.owner_confirmed_payment !== true) {
