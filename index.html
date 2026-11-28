@@ -122,13 +122,13 @@ button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 7px
 <div id="chatDisclaimer">Conversation preview: these are scripted sample exchanges for the office experience. They are not yet autonomous AI-to-AI conversations and do not represent completed work.</div>
 </section></div><div id="taskModal"><section id="taskPanel">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · OPERATIONS</div><h2>Cloud Task Desk</h2></div><button id="taskClose">CLOSE ✕</button></div>
-<p style="color:#c5d2c0;font-size:11px;line-height:1.5">Tasks saved here are stored in your Cloudflare D1 database and can be accessed from another device. This is task management, not autonomous AI execution yet.</p>
+<p style="color:#c5d2c0;font-size:11px;line-height:1.5">Tasks are stored in Cloudflare D1. Michael can delegate using Workers AI. Customer Relations can now execute assigned tasks using Workers AI; other departments are not automated yet.</p>
 <label class="taskLabel">OFFICE ACCESS KEY (your OFFICE_ADMIN_TOKEN secret value)</label>
 <input id="officeKey" class="taskInput" type="password" autocomplete="off" placeholder="Paste your private access key">
 <div class="huntActions"><button id="saveOfficeKey" class="gold">CONNECT</button><button id="forgetOfficeKey">CLEAR KEY</button><button id="refreshTasks">REFRESH TASKS</button></div>
 <div id="taskConnection" class="huntNotice">Not connected. Enter your private key to connect.</div>
 <h3 style="color:var(--gold)">✦ GENERAL MANAGER · DELEGATE WORK</h3>
-<p style="color:#c5d2c0;font-size:11px">Ilagay ang instruction. Gagamit ang Manager ng built-in routing rules para pumili ng department at gumawa ng cloud task. Hindi pa ito generative AI.</p>
+<p style="color:#c5d2c0;font-size:11px">Ilagay ang instruction. Gagamit si Michael ng Workers AI para suriin ang instruction, pumili ng department, at gumawa ng cloud task.</p>
 <label class="taskLabel">OWNER INSTRUCTION</label><textarea id="managerInstruction" class="taskInput" rows="3" maxlength="2000" placeholder="e.g. Gumawa ng promotional post para sa weekend staycation"></textarea>
 <div class="huntActions"><button id="delegateTask" class="gold">ANALYZE & DELEGATE</button></div>
 <div id="managerResult" class="huntNotice">Waiting for your instruction.</div>
@@ -138,7 +138,7 @@ button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 7px
 <label class="taskLabel">ASSIGN TO</label><select id="newTaskAgent" class="taskInput"><option>General Manager</option><option>Customer Relations</option><option>Client Hunting</option><option>Creative & Editing</option><option>Booking & Scheduling</option></select>
 <label class="taskLabel">PRIORITY</label><select id="newTaskPriority" class="taskInput"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>
 <div class="huntActions"><button id="createTask" class="gold">SAVE TASK TO CLOUD</button></div>
-<h3 style="color:var(--gold)">📋 CLOUD TASKS</h3><div id="cloudTaskList"></div>
+<h3 style="color:var(--gold)">✦ CUSTOMER RELATIONS · AGENT WORK OUTPUT</h3><div id="agentWorkOutput" class="huntNotice">Completed AI-generated work will appear here.</div><h3 style="color:var(--gold)">📋 CLOUD TASKS</h3><div id="cloudTaskList"></div>
 </section></div><div id="huntModal"><section id="huntPanel">
  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="eyebrow">PAHINGAHAN · CLIENT HUNTING</div><h2>Lead Finder & Reply Desk</h2></div><button id="huntClose">CLOSE ✕</button></div>
  <p>Assisted prospecting workspace. Ilagay ang public post details o inquiry na ikaw mismo ang may access. Gumagawa ito ng draft reply at lead record sa browser na ito.</p>
@@ -393,7 +393,7 @@ function showStatus(msg,good=false){status.textContent=msg;status.style.borderLe
 async function refresh(){
  try{
   const data=await api("/api/office");
-  list.innerHTML=data.tasks.length?data.tasks.map(t=>'<div class="taskRow"><b>#'+t.id+' · '+escapeHtml(t.title)+'</b><br><small>'+escapeHtml(t.assigned_agent||"Unassigned")+' · '+escapeHtml(t.priority)+' · '+escapeHtml(t.status)+'</small>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+'<div class="huntActions"><button data-task-status="'+t.id+'" data-status="in_progress">START</button><button data-task-status="'+t.id+'" data-status="completed">COMPLETE</button><button data-task-status="'+t.id+'" data-status="blocked">BLOCK</button></div></div>').join(""):'<p style="color:#b7c4ad">No cloud tasks yet.</p>';
+  list.innerHTML=data.tasks.length?data.tasks.map(t=>'<div class="taskRow"><b>#'+t.id+' · '+escapeHtml(t.title)+'</b><br><small>'+escapeHtml(t.assigned_agent||"Unassigned")+' · '+escapeHtml(t.priority)+' · '+escapeHtml(t.status)+'</small>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+'<div class="huntActions">'+(t.assigned_agent==="Customer Relations"&&t.status!=="completed"?'<button data-run-agent="'+t.id+'" class="gold">RUN CUSTOMER RELATIONS</button>':'')+'<button data-task-status="'+t.id+'" data-status="in_progress">START</button><button data-task-status="'+t.id+'" data-status="completed">COMPLETE</button><button data-task-status="'+t.id+'" data-status="blocked">BLOCK</button></div></div>').join(""):'<p style="color:#b7c4ad">No cloud tasks yet.</p>';
   showStatus("Connected to Cloudflare D1 · "+data.tasks.length+" task(s) loaded.",true);
  }catch(e){showStatus("Connection error: "+e.message);list.innerHTML=""}
 }
@@ -422,6 +422,18 @@ $("createTask").onclick=async()=>{
  catch(e){showStatus("Could not save task: "+e.message)}
 };
 list.addEventListener("click",async e=>{
+ const runButton=e.target.closest("button[data-run-agent]");
+ if(runButton){
+  const output=$("agentWorkOutput"),taskId=Number(runButton.dataset.runAgent);
+  runButton.disabled=true;runButton.textContent="AGENT WORKING...";
+  output.textContent="Emma · Customer Relations is analyzing task #"+taskId+" and preparing the response playbook...";
+  try{
+   const result=await api("/api/office/agents/customer-relations/execute","POST",{task_id:taskId});
+   output.textContent="TASK #"+result.task_id+" · "+result.status.toUpperCase()+"\\n\\n"+result.output;
+   await refresh();
+  }catch(err){output.textContent="Agent execution failed: "+err.message;runButton.disabled=false;runButton.textContent="RETRY CUSTOMER RELATIONS"}
+  return;
+ }
  const b=e.target.closest("button[data-task-status]");if(!b)return;
  try{await api("/api/office/tasks/"+b.dataset.taskStatus,"PATCH",{status:b.dataset.status,agent_name:"Owner"});await refresh()}
  catch(err){showStatus("Could not update task: "+err.message)}
