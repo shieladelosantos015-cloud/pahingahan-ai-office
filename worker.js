@@ -1,7 +1,7 @@
 const GRAPH_API_VERSION = "v27.0";
 
 const HANDOFF =
-  "Para sa payment at final reservation confirmation, owner po mismo ang mag-aassist. Paki-message po ang owner/admin ng Page para ma-check at maasikaso ang inyong booking. Huwag pong magpadala ng payment hangga't hindi direktang kinukumpirma ng owner.";
+  "Para po sa payment or downpayment, please wait lang po muna sandali. Ako po ang magbibigay sa inyo ng payment details kung saan ninyo puwedeng i-send ang downpayment. Thank you po! 😊";
 
 export default {
   async scheduled(controller, env, ctx) {
