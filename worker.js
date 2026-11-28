@@ -212,6 +212,31 @@ async function sendMessengerReply(recipientId, message, env) {
   }
 }
 
+async function callGoogleCalendar(env, payload) {
+  if (!env.GOOGLE_CALENDAR_URL || !env.GOOGLE_CALENDAR_API_KEY) {
+    throw new Error("Google Calendar URL or API key secret is not configured.");
+  }
+  const response = await fetch(env.GOOGLE_CALENDAR_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      api_key: env.GOOGLE_CALENDAR_API_KEY
+    })
+  });
+  const raw = await response.text();
+  let result;
+  try {
+    result = JSON.parse(raw);
+  } catch {
+    throw new Error("Google Calendar returned a non-JSON response. Check Apps Script deployment and permissions.");
+  }
+  if (!response.ok) {
+    throw new Error("Google Calendar request failed with HTTP " + response.status + ".");
+  }
+  return result;
+}
+
 async function handleOfficeApi(request, env) {
   const cors = {
     "Access-Control-Allow-Origin": "*",
@@ -251,6 +276,43 @@ async function handleOfficeApi(request, env) {
   const path = url.pathname.replace(/\/+$/, "");
 
   try {
+    if (request.method === "POST" && path === "/api/office/calendar/availability") {
+      const body = await request.json();
+      const date = String(body.date || "");
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
+        return json({ error: "A valid date in YYYY-MM-DD format is required." }, 400);
+      }
+      const result = await callGoogleCalendar(env, {
+        action: "availability",
+        date
+      });
+      if (!result.success) return json({ error: result.error || "Calendar availability check failed." }, 502);
+      return json(result);
+    }
+
+    if (request.method === "POST" && path === "/api/office/calendar/book") {
+      const body = await request.json();
+      const date = String(body.date || "");
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || isNaN(new Date(date + "T00:00:00+08:00").getTime())) {
+        return json({ error: "A valid date in YYYY-MM-DD format is required." }, 400);
+      }
+      if (body.owner_confirmed_payment !== true) {
+        return json({ error: "Owner payment confirmation is required before booking." }, 403);
+      }
+      const result = await callGoogleCalendar(env, {
+        action: "create_booking",
+        date,
+        client_name: String(body.client_name || "Guest").slice(0, 100),
+        guests: String(body.guests || "Not specified").slice(0, 50),
+        owner_confirmed_payment: true
+      });
+      if (!result.success) return json({ error: result.error || "Calendar booking failed." }, 409);
+      await env.DB.prepare(
+        "INSERT INTO activity_logs (agent_name, action, details) VALUES (?, ?, ?)"
+      ).bind("Booking & Scheduling", "Google Calendar booking created", "Calendar event created for " + date + " — " + String(body.client_name || "Guest").slice(0, 100)).run();
+      return json(result, 201);
+    }
+
     if (request.method === "GET" && path === "/api/office") {
       const results = await Promise.all([
         env.DB.prepare("SELECT * FROM tasks ORDER BY id DESC LIMIT 100").all(),
